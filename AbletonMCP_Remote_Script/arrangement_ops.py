@@ -136,7 +136,7 @@ class ArrangementOpsMixin(object):
             raise ValueError("Arrangement clip is not a MIDI clip")
         note_payload = self._build_midi_notes(params.get("notes", []))
         clip.add_new_notes(note_payload)
-        return {"added": len(note_payload["notes"])}
+        return {"added": len(note_payload)}
 
     def _get_arrangement_clip_notes(self, params):
         track = self._get_track(params["track_index"])

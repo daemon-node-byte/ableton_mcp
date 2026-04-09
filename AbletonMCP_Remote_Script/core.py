@@ -150,7 +150,7 @@ class CoreOpsMixin(object):
         }
 
     def _build_midi_notes(self, notes_data):
-        return {"notes": [self._build_midi_note(note) for note in notes_data]}
+        return [self._build_midi_note(note) for note in notes_data]
 
     def _routing_display_name(self, routing):
         if routing is None:

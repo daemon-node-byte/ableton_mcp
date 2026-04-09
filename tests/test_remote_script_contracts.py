@@ -112,22 +112,20 @@ class RemoteScriptContractTests(unittest.TestCase):
             note,
         )
 
-    def test_build_midi_notes_wraps_notes_payload(self):
+    def test_build_midi_notes_returns_list_payload(self):
         harness = _CoreHarness()
         payload = harness._build_midi_notes(
             [{"pitch": 60, "time": 0.0, "duration": 0.5, "velocity": 100, "mute": False}]
         )
         self.assertEqual(
-            {
-                "notes": [
-                    {
-                        "pitch": 60,
-                        "start_time": 0.0,
-                        "duration": 0.5,
-                        "velocity": 100.0,
-                        "mute": False,
-                    }
-                ]
-            },
+            [
+                {
+                    "pitch": 60,
+                    "start_time": 0.0,
+                    "duration": 0.5,
+                    "velocity": 100.0,
+                    "mute": False,
+                }
+            ],
             payload,
         )
