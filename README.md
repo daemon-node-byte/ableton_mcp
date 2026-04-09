@@ -1,208 +1,96 @@
 # AbletonMCP
 
-[![Version v0.1.0-beta](https://img.shields.io/badge/version-v0.1.0--beta-blue)](README.md)
+[![Version v0.2-beta.0](https://img.shields.io/badge/version-v0.2--beta.0-blue)](README.md)
 [![Ableton Live 12](https://img.shields.io/badge/Ableton%20Live-12-000000)](docs/install-and-use-mcp.md)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](docs/install-and-use-mcp.md)
 [![MCP stdio](https://img.shields.io/badge/MCP-stdio-2E8B57)](docs/install-and-use-mcp.md)
 [![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](docs/install-and-use-mcp.md)
-[![Core Flows Verified](https://img.shields.io/badge/Live%20Validation-core%20flows%20verified-brightgreen)](docs/command-catalog.md)
-[![Status Audit Heavy](https://img.shields.io/badge/status-audit--heavy-orange)](docs/manual-validation-backlog.md)
 
-AbletonMCP is a Python-first MCP server for Ableton Live 12.
+AbletonMCP is a Python-first MCP server for Ableton Live 12 built around a custom Remote Script and a Python `stdio` MCP server.
 
-It has two parts:
-- an Ableton Live Remote Script that runs inside Live and exposes a TCP bridge
-- a Python MCP server that talks to that bridge and exposes tools over `stdio`
+## What It Includes
 
-## Why This Project Exists
+- [AbletonMCP_Remote_Script](/Users/joshmclain/code/AbletonMCP_v2/AbletonMCP_Remote_Script)
+  - runs inside Ableton Live and exposes a TCP bridge on `localhost:9877`
+- [mcp_server](/Users/joshmclain/code/AbletonMCP_v2/mcp_server)
+  - talks to the bridge and exposes MCP tools over `stdio`
+- [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py)
+  - source of truth for command metadata, stability, and MCP exposure
 
-The docs in [docs/ableton_live_mcp_discoveries.md](/Users/joshmclain/code/AbletonMCP_v2/docs/ableton_live_mcp_discoveries.md) show the gap this project is trying to close:
+## Why This Exists
 
-- many existing Ableton MCP servers are constrained by stock `AbletonOSC` endpoints
-- Session View control is common, but deeper Arrangement View editing is less reliable
-- browser loading, device insertion, and plugin-facing workflows are often the weak point
-- there is room for a Python-first server that owns more of the feature surface through a custom Remote Script
+- many existing Ableton MCP stacks are strongest in Session View and weaker in arrangement editing, browser loading, and deeper device workflows
+- this repo keeps the ambitious surface in Python instead of stopping at stock `AbletonOSC` coverage
+- the historical research that led here is preserved in [docs/ableton_live_mcp_discoveries.md](/Users/joshmclain/code/AbletonMCP_v2/docs/ableton_live_mcp_discoveries.md)
 
-This project is aimed at giving MCP clients a broader and more practical Ableton Live 12 control surface, especially for:
-- session control
-- arrangement control
-- tracks, clips, and MIDI notes
-- devices, racks, chains, and macros
-- browser-driven loading
-- future plugin-oriented workflows
+## Current Status
 
-## Current Architecture
+Validated locally in Ableton Live 12 on `2026-04-09`:
 
-- [AbletonMCP_Remote_Script](/Users/joshmclain/code/AbletonMCP_v2/AbletonMCP_Remote_Script) runs inside Ableton Live
-- [mcp_server](/Users/joshmclain/code/AbletonMCP_v2/mcp_server) provides the MCP server
-- the Remote Script listens on TCP port `9877` by default
-- the MCP server uses `stdio` transport by default
-- Docker packaging is included for a more portable runtime
+- core connectivity and session introspection
+- Session View clip and MIDI note round trips
+- Arrangement View MIDI/audio clip creation, edit, delete, and duplication flows
+- browser discovery plus built-in instrument and drum-kit loading
 
-The current source of truth for command metadata and maturity is [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py). The broader audit context lives in [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md).
+Still in the validation backlog:
 
-## Prerequisites
+- take lane workflows
+- plugin-window behavior
+- third-party or broader browser/effect loading beyond the validated built-in slice
+- arrangement undo behavior and audio-move policy
 
-Based on [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md):
+## Quick Start
 
-- Ableton Live 12
-- Python `3.10+` for local runs
-- `uv` if you want the recommended local Python workflow
-- Docker Desktop or Docker Engine if you want the containerized MCP server
-- an MCP client that can launch a `stdio` server process
-
-## Installation and Setup (local hosting only)
-
-### 1. Install the Ableton Remote Script
-
-Copy [AbletonMCP_Remote_Script](/Users/joshmclain/code/AbletonMCP_v2/AbletonMCP_Remote_Script) into Ableton's Remote Scripts directory and rename the installed folder to `AbletonMCP`.
-
-Typical paths from the docs:
-
-- macOS: `/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP`
-- Windows: `C:\Users\<you>\Documents\Ableton\User Library\Remote Scripts\AbletonMCP`
-
-Then in Ableton Live:
-
-1. Open `Settings` / `Preferences` > `Link, Tempo & MIDI`.
-2. In a Control Surface slot, choose `AbletonMCP`.
-3. Leave Live open while using the MCP server.
-
-### 2. Smoke test the Live-side bridge
-
-On the same machine as Ableton Live:
+1. Copy [AbletonMCP_Remote_Script](/Users/joshmclain/code/AbletonMCP_v2/AbletonMCP_Remote_Script) into Ableton's MIDI Remote Scripts directory and select `AbletonMCP_Remote_Script` as the control surface.
+2. Smoke test the Live bridge:
 
 ```bash
 printf '{"type":"health_check","params":{}}\n' | nc localhost 9877
 ```
 
-You should get a JSON response with `status: "success"`.
-
-### 3. Run the MCP server locally
+3. Run the MCP server locally:
 
 ```bash
 cd /Users/joshmclain/code/AbletonMCP_v2
 uv run --python 3.11 ableton-mcp
 ```
 
-Useful environment variables:
+For Docker, MCP client config, validator commands, and troubleshooting, use the canonical setup guide in [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md).
 
-- `ABLETON_MCP_HOST` default: `localhost`
-- `ABLETON_MCP_PORT` default: `9877`
-- `ABLETON_MCP_CONNECT_TIMEOUT` default: `5.0`
-- `ABLETON_MCP_RESPONSE_TIMEOUT` default: `30.0`
-- `ABLETON_MCP_TRANSPORT` default: `stdio`
+## Command Surface
 
-### 4. Run with Docker
+First-class MCP tools currently cover:
 
-Build:
+- health, transport, and session inspection
+- basic track inspection and creation
+- Session View clip and note workflows
+- Arrangement View clip creation and editing
+- device inspection and named parameter access
+- browser discovery and validated built-in loading
 
-```bash
-docker build -t ableton-mcp-v2 .
-```
+Anything not promoted yet is still reachable through `ableton_raw_command(...)`.
 
-Run on macOS and Windows:
+Use these as the current sources of truth:
 
-```bash
-docker run --rm -i \
-  -e ABLETON_MCP_HOST=host.docker.internal \
-  -e ABLETON_MCP_PORT=9877 \
-  ableton-mcp-v2
-```
+- [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md)
+  - domain-by-domain command inventory
+- [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py)
+  - exact parameter metadata, stability labels, and MCP exposure
 
-Run on Linux:
+## Docs
 
-```bash
-docker run --rm -i \
-  --add-host=host.docker.internal:host-gateway \
-  -e ABLETON_MCP_HOST=host.docker.internal \
-  -e ABLETON_MCP_PORT=9877 \
-  ableton-mcp-v2
-```
+- [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md)
+  - canonical setup, runtime usage, validators, and troubleshooting
+- [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md)
+  - canonical command reference
+- [docs/manual-validation-backlog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/manual-validation-backlog.md)
+  - next Live validation targets
+- [docs/README.md](/Users/joshmclain/code/AbletonMCP_v2/docs/README.md)
+  - docs index and reading order
 
-For more detailed setup, see [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md).
+Archived research and planning:
 
-## Feature Status
-
-### Working and verified in Live 12
-
-The following commands are documented as locally verified on `2026-04-09` in [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md) and [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md):
-
-- `health_check`
-- `get_session_info`
-- `get_current_song_time`
-- `get_all_track_names`
-- `get_track_info`
-- `create_midi_track`
-- `delete_track`
-- `create_clip`
-- `delete_clip`
-- `get_clip_notes`
-- `add_notes_to_clip`
-- `get_arrangement_clips`
-- `create_arrangement_midi_clip`
-- `add_notes_to_arrangement_clip`
-- `get_arrangement_clip_notes`
-
-Verified note round trips:
-
-- Session View: create temporary MIDI clip, add 3 notes, read the same 3 notes back, delete the clip
-- Arrangement View: create temporary arrangement MIDI clip, add 3 notes, read the same 3 notes back, delete the clip
-
-### Exposed now, but not yet verified end to end
-
-These are already part of the current MCP surface or dispatcher, but the docs still treat them as `likely-complete`, `partial`, or otherwise provisional:
-
-- transport and song controls such as `set_tempo`, `start_playback`, `stop_playback`, `set_current_song_time`
-- track creation beyond the verified MIDI track flow, such as `create_audio_track`
-- device inspection and parameter commands such as `get_track_devices`, `get_device_parameters`, `set_device_parameter_by_name`, `get_device_parameter_by_name`
-- a larger set of clip, scene, rack, browser, take lane, and view commands in the Remote Script dispatcher
-- raw access to the broader command surface through `ableton_raw_command(...)`
-
-### Not yet complete or still in the validation backlog
-
-From [docs/manual-validation-backlog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/manual-validation-backlog.md), the main unfinished or not-yet-validated areas are:
-
-- arrangement audio clip flow with real file paths
-- native device insertion via `Track.insert_device(...)`
-- browser URI loading and related browser workflows
-- take lane workflows
-- plugin-window behavior
-- remaining arrangement MIDI edge cases such as `resize_arrangement_clip`, `move_arrangement_clip`, `duplicate_to_arrangement`, and undo behavior
-
-## First-Class MCP Tools
-
-The current first-class MCP tools are:
-
-- `health_check`
-- `get_session_info`
-- `get_current_song_time`
-- `set_current_song_time`
-- `set_tempo`
-- `start_playback`
-- `stop_playback`
-- `get_all_track_names`
-- `get_track_info`
-- `create_midi_track`
-- `create_audio_track`
-- `create_clip`
-- `get_clip_notes`
-- `add_notes_to_clip`
-- `get_arrangement_clips`
-- `create_arrangement_midi_clip`
-- `add_notes_to_arrangement_clip`
-- `get_arrangement_clip_notes`
-- `get_track_devices`
-- `get_device_parameters`
-- `set_device_parameter_by_name`
-- `get_device_parameter_by_name`
-
-Everything else in the current command catalog is still reachable through `ableton_raw_command(...)`, but not all of it should be treated as production-ready yet.
-
-## Docs Map
-
-- [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md): installation and usage
-- [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md): command surface and status
-- [docs/manual-validation-backlog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/manual-validation-backlog.md): next validation targets
-- [docs/ableton_live_mcp_discoveries.md](/Users/joshmclain/code/AbletonMCP_v2/docs/ableton_live_mcp_discoveries.md): research and motivation
-- [docs/README.md](/Users/joshmclain/code/AbletonMCP_v2/docs/README.md): guide to the docs folder
+- [docs/ableton_live_mcp_discoveries.md](/Users/joshmclain/code/AbletonMCP_v2/docs/ableton_live_mcp_discoveries.md)
+- [docs/api-comparison-and-codegen-prep.md](/Users/joshmclain/code/AbletonMCP_v2/docs/api-comparison-and-codegen-prep.md)
+- [docs/feasibility-spike-step-1-2.md](/Users/joshmclain/code/AbletonMCP_v2/docs/feasibility-spike-step-1-2.md)
+- [docs/remote-script-module-split-plan.md](/Users/joshmclain/code/AbletonMCP_v2/docs/remote-script-module-split-plan.md)

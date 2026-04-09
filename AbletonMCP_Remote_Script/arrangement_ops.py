@@ -2,9 +2,48 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import os
+
 
 class ArrangementOpsMixin(object):
     """Arrangement clip commands."""
+
+    def _require_non_negative_time(self, value, field_name):
+        numeric_value = float(value)
+        if numeric_value < 0.0:
+            raise ValueError("{} must be >= 0".format(field_name))
+        return numeric_value
+
+    def _require_exact_arrangement_selector(self, params, command_name):
+        has_clip_index = params.get("clip_index") is not None
+        has_start_time = params.get("start_time") is not None
+        if has_clip_index and has_start_time:
+            raise ValueError(
+                "{} requires exactly one of 'clip_index' or 'start_time', not both".format(command_name)
+            )
+        if not has_clip_index and not has_start_time:
+            raise ValueError(
+                "{} requires exactly one of 'clip_index' or 'start_time'".format(command_name)
+            )
+        return {
+            "clip_index": params.get("clip_index") if has_clip_index else None,
+            "start_time": params.get("start_time") if has_start_time else None,
+        }
+
+    def _ensure_move_target_is_clear(self, track, current_clip, new_start_time, length):
+        new_end_time = new_start_time + float(length)
+        for arrangement_clip in getattr(track, "arrangement_clips", []):
+            if arrangement_clip == current_clip:
+                continue
+            if arrangement_clip.start_time < new_end_time and arrangement_clip.end_time > new_start_time:
+                raise ValueError(
+                    "Cannot move clip to {} because it overlaps existing clip '{}' [{} - {}]".format(
+                        new_start_time,
+                        arrangement_clip.name,
+                        arrangement_clip.start_time,
+                        arrangement_clip.end_time,
+                    )
+                )
 
     def _get_arrangement_clips(self, params):
         track = self._get_track(params["track_index"])
@@ -23,8 +62,10 @@ class ArrangementOpsMixin(object):
         track = self._get_track(params["track_index"])
         if not track.has_midi_input:
             raise ValueError("Track {} is not a MIDI track".format(params["track_index"]))
-        start_time = float(params["start_time"])
+        start_time = self._require_non_negative_time(params["start_time"], "start_time")
         length = float(params.get("length", 4.0))
+        if length <= 0.0:
+            raise ValueError("length must be > 0")
         clip = track.create_midi_clip(start_time, length)
         return {
             "start_time": clip.start_time,
@@ -43,7 +84,11 @@ class ArrangementOpsMixin(object):
                 "create_arrangement_audio_clip requires 'file_path'. "
                 "Live does not support start_time/length-only arrangement audio clip creation."
             )
-        start_time = float(params["start_time"])
+        if not os.path.isabs(file_path):
+            raise ValueError("file_path must be an absolute path")
+        if not os.path.isfile(file_path):
+            raise ValueError("file_path does not exist: {}".format(file_path))
+        start_time = self._require_non_negative_time(params["start_time"], "start_time")
         clip = track.create_audio_clip(file_path, start_time)
         return {
             "start_time": clip.start_time,
@@ -55,24 +100,28 @@ class ArrangementOpsMixin(object):
 
     def _delete_arrangement_clip(self, params):
         track = self._get_track(params["track_index"])
+        selector = self._require_exact_arrangement_selector(params, "delete_arrangement_clip")
         clip = self._find_arrangement_clip(
             track,
-            clip_index=params.get("clip_index"),
-            start_time=params.get("start_time"),
+            clip_index=selector["clip_index"],
+            start_time=selector["start_time"],
         )
         track.delete_clip(clip)
         return {"ok": True}
 
     def _resize_arrangement_clip(self, params):
         track = self._get_track(params["track_index"])
+        selector = self._require_exact_arrangement_selector(params, "resize_arrangement_clip")
         clip = self._find_arrangement_clip(
             track,
-            clip_index=params.get("clip_index"),
-            start_time=params.get("start_time"),
+            clip_index=selector["clip_index"],
+            start_time=selector["start_time"],
         )
         new_length = float(params["length"])
+        if new_length <= 0.0:
+            raise ValueError("length must be > 0")
         clip.end_marker = clip.start_marker + new_length
-        clip.loop_end = new_length
+        clip.loop_end = clip.loop_start + new_length
         return {
             "start_time": clip.start_time,
             "end_time": clip.end_time,
@@ -82,12 +131,13 @@ class ArrangementOpsMixin(object):
     def _move_arrangement_clip(self, params):
         """Move an arrangement clip by recreating it at the new position."""
         track = self._get_track(params["track_index"])
+        selector = self._require_exact_arrangement_selector(params, "move_arrangement_clip")
         clip = self._find_arrangement_clip(
             track,
-            clip_index=params.get("clip_index"),
-            start_time=params.get("start_time"),
+            clip_index=selector["clip_index"],
+            start_time=selector["start_time"],
         )
-        new_start_time = float(params["new_start_time"])
+        new_start_time = self._require_non_negative_time(params["new_start_time"], "new_start_time")
         is_midi_clip = clip.is_midi_clip
         length = clip.length
         stored_name = clip.name
@@ -95,25 +145,28 @@ class ArrangementOpsMixin(object):
         stored_looping = clip.looping
         stored_loop_start = clip.loop_start
         stored_loop_end = clip.loop_end
+        stored_start_marker = clip.start_marker
+        stored_end_marker = clip.end_marker
         stored_notes = []
 
-        if is_midi_clip:
-            stored_notes = self._serialize_notes(self._get_clip_notes_raw(clip))
+        if not is_midi_clip:
+            raise ValueError(
+                "move_arrangement_clip currently supports MIDI clips only. "
+                "Audio clip moves remain unsupported because Live does not expose a direct move API."
+            )
+        stored_notes = self._serialize_notes(self._get_clip_notes_raw(clip))
+        self._ensure_move_target_is_clear(track, clip, new_start_time, length)
 
         track.delete_clip(clip)
-        if is_midi_clip:
-            new_clip = track.create_midi_clip(new_start_time, length)
-        else:
-            raise ValueError(
-                "move_arrangement_clip for audio clips is still unverified because Live "
-                "does not expose a direct move API and recreating audio clips requires file-path fidelity."
-            )
+        new_clip = track.create_midi_clip(new_start_time, length)
 
         new_clip.name = stored_name
         new_clip.color = stored_color
         new_clip.looping = stored_looping
         new_clip.loop_start = stored_loop_start
         new_clip.loop_end = stored_loop_end
+        new_clip.start_marker = stored_start_marker
+        new_clip.end_marker = stored_end_marker
 
         if stored_notes:
             new_clip.add_new_notes(self._build_midi_notes(stored_notes))
@@ -153,7 +206,10 @@ class ArrangementOpsMixin(object):
     def _duplicate_to_arrangement(self, params):
         clip = self._get_clip(params["track_index"], params["slot_index"])
         track = self._get_track(params["track_index"])
-        start_time = float(params.get("start_time", self.song().current_song_time))
+        start_time = self._require_non_negative_time(
+            params.get("start_time", self.song().current_song_time),
+            "start_time",
+        )
         track.duplicate_clip_to_arrangement(clip, start_time)
         return {
             "ok": True,

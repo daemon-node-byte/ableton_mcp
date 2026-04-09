@@ -1,46 +1,42 @@
 # Install and Use AbletonMCP v2
 
-Date: 2026-04-09
-Project: AbletonMCP_v2
-Audience: local users who want to run the MCP server against Ableton Live 12, either directly or through Docker
+This is the canonical setup and runtime usage guide for AbletonMCP.
 
 ## Overview
 
-AbletonMCP v2 has two parts:
+AbletonMCP has two parts:
 
-1. the Ableton Live Remote Script
-2. the Python MCP server
+1. `AbletonMCP_Remote_Script`, which runs inside Ableton Live
+2. the Python MCP server in `mcp_server`, which exposes tools over `stdio`
 
-The Remote Script runs inside Ableton Live and listens on TCP port `9877` by default.
-The MCP server talks to that Remote Script and exposes MCP tools to your client over `stdio`.
+The Live-side bridge listens on TCP port `9877` by default.
 
 ## Prerequisites
 
 - Ableton Live 12
-- Docker Desktop or Docker Engine if you want the containerized MCP server
+- Python `3.10+`
+- `uv` for the recommended local run flow
+- Docker only if you want the containerized server
 - an MCP client that can launch a `stdio` server process
 
-## 1. Install the Ableton Remote Script
+## 1. Install the Remote Script
 
-Copy the repo folder [AbletonMCP_Remote_Script](/Users/joshmclain/code/AbletonMCP_v2/AbletonMCP_Remote_Script) into your Ableton User Library Remote Scripts directory and rename the installed folder to `AbletonMCP`.
+Copy [AbletonMCP_Remote_Script](/Users/joshmclain/code/AbletonMCP_v2/AbletonMCP_Remote_Script) into Ableton's MIDI Remote Scripts directory.
 
-Typical paths:
+Typical locations:
 
-- macOS: `/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts`
-- Windows: `C:\Users\<you>\Documents\Ableton\User Library\Remote Scripts\AbletonMCP`
+- macOS: `/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP_Remote_Script`
+- Windows: `C:\Users\<you>\Documents\Ableton\User Library\Remote Scripts\AbletonMCP_Remote_Script`
 
-After copying it:
+Then in Ableton Live:
 
-1. Open Ableton Live.
-2. Go to `Settings` / `Preferences` > `Link, Tempo & MIDI`.
-3. In a Control Surface slot, choose `AbletonMCP`.
-4. Leave Live open while you use the MCP server.
+1. Open `Settings` / `Preferences` > `Link, Tempo & MIDI`.
+2. In a Control Surface slot, choose `AbletonMCP_Remote_Script`.
+3. Leave Live open while using the MCP server.
 
-## 2. Optional smoke test for the Live-side bridge
+## 2. Smoke Test the Live Bridge
 
-Before involving MCP, confirm the Remote Script TCP bridge is alive.
-
-On the same machine as Ableton Live:
+Run this on the same machine as Ableton Live:
 
 ```bash
 printf '{"type":"health_check","params":{}}\n' | nc localhost 9877
@@ -49,14 +45,12 @@ printf '{"type":"health_check","params":{}}\n' | nc localhost 9877
 Expected response shape:
 
 ```json
-{"status":"success","result":{"status":"ok","tempo":120.0,"is_playing":false,"track_count":8}}
+{"status":"success","result":{"status":"ok","tempo":120.0,"is_playing":false,"track_count":4}}
 ```
 
-If this does not work, fix the Live-side installation first. The MCP server will not work until this TCP bridge responds.
+If this fails, fix the Live-side install before involving MCP.
 
-## 3. Run the MCP server locally without Docker
-
-This repo requires Python `3.10+`.
+## 3. Run the MCP Server Locally
 
 Recommended command:
 
@@ -67,36 +61,21 @@ uv run --python 3.11 ableton-mcp
 
 Useful environment variables:
 
-- `ABLETON_MCP_HOST`
-  default: `localhost`
-- `ABLETON_MCP_PORT`
-  default: `9877`
-- `ABLETON_MCP_CONNECT_TIMEOUT`
-  default: `5.0`
-- `ABLETON_MCP_RESPONSE_TIMEOUT`
-  default: `30.0`
-- `ABLETON_MCP_TRANSPORT`
-  default: `stdio`
+- `ABLETON_MCP_HOST` default: `localhost`
+- `ABLETON_MCP_PORT` default: `9877`
+- `ABLETON_MCP_CONNECT_TIMEOUT` default: `5.0`
+- `ABLETON_MCP_RESPONSE_TIMEOUT` default: `30.0`
+- `ABLETON_MCP_TRANSPORT` default: `stdio`
 
-## 4. Build the Docker image
+## 4. Docker Alternative
 
-From the repo root:
+Build:
 
 ```bash
 docker build -t ableton-mcp-v2 .
 ```
 
-The image uses:
-
-- Python 3.11
-- `stdio` transport by default
-- `ABLETON_MCP_HOST=host.docker.internal` by default
-
-That host default is important because Ableton Live runs on the host machine, not inside the container.
-
-## 5. Run the MCP server in Docker
-
-### macOS and Windows
+Run:
 
 ```bash
 docker run --rm -i \
@@ -105,156 +84,103 @@ docker run --rm -i \
   ableton-mcp-v2
 ```
 
-### Linux
-
-```bash
-docker run --rm -i \
-  --add-host=host.docker.internal:host-gateway \
-  -e ABLETON_MCP_HOST=host.docker.internal \
-  -e ABLETON_MCP_PORT=9877 \
-  ableton-mcp-v2
-```
-
-## 6. Example MCP client configuration
-
-Example `mcpServers` entry for a client that launches Docker-based stdio servers:
-
-### macOS and Windows
-
-```json
-{
-  "mcpServers": {
-    "ableton": {
-      "command": "docker",
-      "args": [
-        "run",
-        "--rm",
-        "-i",
-        "-e",
-        "ABLETON_MCP_HOST=host.docker.internal",
-        "-e",
-        "ABLETON_MCP_PORT=9877",
-        "ableton-mcp-v2"
-      ]
-    }
-  }
-}
-```
-
-### Linux
-
-```json
-{
-  "mcpServers": {
-    "ableton": {
-      "command": "docker",
-      "args": [
-        "run",
-        "--rm",
-        "-i",
-        "--add-host=host.docker.internal:host-gateway",
-        "-e",
-        "ABLETON_MCP_HOST=host.docker.internal",
-        "-e",
-        "ABLETON_MCP_PORT=9877",
-        "ableton-mcp-v2"
-      ]
-    }
-  }
-}
-```
-
-## 7. What tools are exposed right now
-
-The current first-class MCP tools include:
-
-- `health_check`
-- `get_session_info`
-- `get_current_song_time`
-- `set_current_song_time`
-- `set_tempo`
-- `start_playback`
-- `stop_playback`
-- `get_all_track_names`
-- `get_track_info`
-- `create_midi_track`
-- `create_audio_track`
-- `create_clip`
-- `get_clip_notes`
-- `add_notes_to_clip`
-- `get_arrangement_clips`
-- `create_arrangement_midi_clip`
-- `add_notes_to_arrangement_clip`
-- `get_arrangement_clip_notes`
-- `get_track_devices`
-- `get_device_parameters`
-- `set_device_parameter_by_name`
-- `get_device_parameter_by_name`
-
-There is also a development escape hatch:
-
-- `ableton_raw_command`
-
-That tool can call any cataloged command from [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py), but some commands are still marked `partial` or `unverified`.
-
-## 8. Verified locally
-
-The following commands have been verified against a real local Ableton Live 12 session on 2026-04-09:
-
-- `health_check`
-- `get_session_info`
-- `get_current_song_time`
-- `get_all_track_names`
-- `get_track_info`
-- `create_midi_track`
-- `delete_track`
-- `create_clip`
-- `delete_clip`
-- `get_clip_notes`
-- `add_notes_to_clip`
-- `get_arrangement_clips`
-- `create_arrangement_midi_clip`
-- `add_notes_to_arrangement_clip`
-- `get_arrangement_clip_notes`
-
-The session and arrangement note flows were validated as full round trips:
-- create temporary clip
-- add 3 MIDI notes
-- read the same 3 notes back
-- delete the temporary clip
-
-## 9. Common problems
-
-### The MCP server starts but commands fail to connect
-
-Usually means the Remote Script is not installed, not selected as a Control Surface, or Ableton Live is not open.
-
-### Docker container cannot reach Ableton
-
-Use `ABLETON_MCP_HOST=host.docker.internal`.
 On Linux, also add:
 
 ```bash
 --add-host=host.docker.internal:host-gateway
 ```
 
-### Local Python run fails with dependency errors
+## 5. Example MCP Client Configuration
 
-Your system Python is probably older than `3.10`.
-Use:
+Example Docker-backed `mcpServers` entry:
+
+```json
+{
+  "mcpServers": {
+    "ableton": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "ABLETON_MCP_HOST=host.docker.internal",
+        "-e",
+        "ABLETON_MCP_PORT=9877",
+        "ableton-mcp-v2"
+      ]
+    }
+  }
+}
+```
+
+On Linux, add `--add-host=host.docker.internal:host-gateway` to the Docker args.
+
+## 6. Current Verified Scope
+
+Direct Live validation on `2026-04-09` currently covers:
+
+- connectivity and session inspection
+- Session View clip creation, note write, note read, and cleanup
+- Arrangement View MIDI/audio clip creation, resize, move, delete, and duplication
+- browser discovery and validated built-in loading for instruments and drum kits
+
+For the full command surface and status map, use [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md) and [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py).
+
+## 7. Validation Helpers
+
+Arrangement batch:
+
+```bash
+uv run --python 3.11 python scripts/validate_arrangement_batch_2.py \
+  --audio-file /absolute/path/to/audio-file.wav
+```
+
+Browser and loading batch:
+
+```bash
+uv run --python 3.11 python scripts/validate_browser_loading_batch.py
+```
+
+## 8. Important Contract Notes
+
+- `create_arrangement_audio_clip` requires an absolute existing `file_path`
+- `delete_arrangement_clip`, `resize_arrangement_clip`, and `move_arrangement_clip` require exactly one selector: `clip_index` or `start_time`
+- `move_arrangement_clip` is currently MIDI-only
+- `get_browser_tree`, `get_browser_items_at_path`, and `search_browser` share the normalized top-level category set:
+  `all`, `instruments`, `audio_effects`, `midi_effects`, `drums`, `sounds`, `samples`, `packs`, `user_library`
+- `search_browser` requires a non-empty query
+- `load_instrument_or_effect` requires exactly one of `device_name`, `native_device_name`, or `uri`
+- `load_instrument_or_effect` only accepts `target_index` for native insertion and requires `target_index >= 0`
+- `load_drum_kit` requires a loadable drum-kit preset URI and rejects the generic `Drum Rack` device entry
+
+## 9. Troubleshooting
+
+### The MCP server cannot connect
+
+Usually means:
+
+- the Remote Script is not installed
+- the wrong control surface is selected
+- Ableton Live is not open
+- the bridge on `localhost:9877` is not responding
+
+### Docker cannot reach Ableton
+
+Use `ABLETON_MCP_HOST=host.docker.internal`.
+On Linux, also add `--add-host=host.docker.internal:host-gateway`.
+
+### Local Python run fails
+
+Use the pinned command:
 
 ```bash
 uv run --python 3.11 ableton-mcp
 ```
 
-## 10. Current honesty note
+## 10. Honesty Note
 
-This repo is ready to run locally and in Docker, but it is still in an audit-heavy stage.
-The server is intentionally honest about command maturity:
+This repo is runnable today, but it is still in an audit-heavy phase.
+Some commands are `confirmed`, some are `likely-complete`, and some remain provisional.
 
-- some commands are `confirmed`
-- some commands are `likely-complete`
-- some are `partial`
-- some remain `unverified`
-
-For the current maturity map, see [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md) and [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py).
+Use [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md) and [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py) for the current maturity map.

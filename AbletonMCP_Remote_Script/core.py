@@ -15,6 +15,17 @@ except ImportError:
 class CoreOpsMixin(object):
     """Shared object lookup and serialization helpers."""
 
+    BROWSER_ROOT_NAMES = (
+        "instruments",
+        "audio_effects",
+        "midi_effects",
+        "drums",
+        "sounds",
+        "samples",
+        "packs",
+        "user_library",
+    )
+
     def _get_track(self, track_index):
         tracks = self.song().tracks
         idx = int(track_index)
@@ -187,3 +198,178 @@ class CoreOpsMixin(object):
         if isinstance(routing, dict):
             return routing.get("display_name", "")
         return str(routing)
+
+    def _parse_non_negative_int(self, value, field_name):
+        parsed_value = int(value)
+        if parsed_value < 0:
+            raise ValueError("{} must be >= 0".format(field_name))
+        return parsed_value
+
+    def _available_browser_roots(self):
+        browser = self.application().browser
+        roots = {}
+        for root_name in self.BROWSER_ROOT_NAMES:
+            root = getattr(browser, root_name, None)
+            if root is not None:
+                roots[root_name] = root
+        return roots
+
+    def _get_browser_root(self, category_name):
+        normalized_name = str(category_name).strip().lower()
+        roots = self._available_browser_roots()
+        if normalized_name not in self.BROWSER_ROOT_NAMES:
+            raise ValueError("Unknown browser category: {}".format(normalized_name))
+        root = roots.get(normalized_name)
+        if root is None:
+            raise ValueError("Browser category '{}' is unavailable in this Live session".format(normalized_name))
+        return root
+
+    def _browser_item_uri(self, item):
+        try:
+            return str(getattr(item, "uri", "") or "")
+        except Exception:
+            return ""
+
+    def _browser_item_children(self, item):
+        try:
+            return list(getattr(item, "children", []) or [])
+        except Exception:
+            return []
+
+    def _prioritized_browser_roots_for_uri(self, browser_uri):
+        roots = self._available_browser_roots()
+        prioritized_names = []
+        if browser_uri.startswith("query:Synths#"):
+            prioritized_names.append("instruments")
+        elif browser_uri.startswith("query:AudioFx#"):
+            prioritized_names.append("audio_effects")
+        elif browser_uri.startswith("query:MidiFx#"):
+            prioritized_names.append("midi_effects")
+        elif browser_uri.startswith("query:Drums#"):
+            prioritized_names.append("drums")
+        elif browser_uri.startswith("query:Sounds#"):
+            prioritized_names.append("sounds")
+        elif browser_uri.startswith("query:Samples#"):
+            prioritized_names.append("samples")
+        elif browser_uri.startswith("query:Packs#"):
+            prioritized_names.append("packs")
+        elif browser_uri.startswith("query:User"):
+            prioritized_names.append("user_library")
+
+        prioritized_roots = []
+        for root_name in prioritized_names:
+            root = roots.get(root_name)
+            if root is not None:
+                prioritized_roots.append(root)
+        for root_name in self.BROWSER_ROOT_NAMES:
+            root = roots.get(root_name)
+            if root is not None and root not in prioritized_roots:
+                prioritized_roots.append(root)
+        return prioritized_roots
+
+    def _resolve_browser_item_by_uri(self, uri, command_name):
+        browser_uri = str(uri).strip()
+        if not browser_uri:
+            raise ValueError("{} requires a non-empty URI".format(command_name))
+        browser = self.application().browser
+        browser_item = None
+        lookup = getattr(browser, "get_item_by_uri", None)
+        if callable(lookup):
+            browser_item = lookup(browser_uri)
+        if browser_item is None:
+            browser_item = self._find_browser_item_by_uri_fallback(browser_uri)
+        if browser_item is None:
+            raise ValueError("Browser item not found for URI: {}".format(browser_uri))
+        return browser_item
+
+    def _find_browser_item_by_uri_fallback(self, browser_uri):
+        prioritized_roots = self._prioritized_browser_roots_for_uri(browser_uri)
+
+        # Fast path for the common case where the URI points at a top-level item
+        # under a known browser root.
+        for root in prioritized_roots:
+            for child in self._browser_item_children(root):
+                if self._browser_item_uri(child) == browser_uri:
+                    return child
+
+        stack = list(prioritized_roots)
+        seen = set()
+        while stack:
+            current = stack.pop()
+            current_key = (self._browser_item_uri(current), getattr(current, "name", ""))
+            if current_key in seen:
+                continue
+            seen.add(current_key)
+            if current_key[0] == browser_uri:
+                return current
+            stack.extend(reversed(self._browser_item_children(current)))
+        return None
+
+    def _build_track_load_result(
+        self,
+        track,
+        previous_devices,
+        mode,
+        track_index,
+        requested_name=None,
+        requested_uri=None,
+        target_index=None,
+    ):
+        devices_after = list(track.devices)
+        result = {
+            "ok": True,
+            "mode": mode,
+            "track_index": int(track_index),
+            "device_count_before": len(previous_devices),
+            "device_count_after": len(devices_after),
+            "loaded": len(devices_after) > len(previous_devices),
+        }
+        if requested_name is not None:
+            result["requested_name"] = requested_name
+        if requested_uri is not None:
+            result["uri"] = requested_uri
+        if target_index is not None:
+            result["target_index"] = int(target_index)
+
+        new_device_index = None
+        new_device = None
+        for index, device in enumerate(devices_after):
+            if all(device is not previous_device for previous_device in previous_devices):
+                new_device_index = index
+                new_device = device
+                break
+
+        if new_device is None and len(devices_after) > len(previous_devices):
+            inferred_index = len(devices_after) - 1 if target_index is None else min(int(target_index), len(devices_after) - 1)
+            candidate = devices_after[inferred_index]
+            if all(candidate is not previous_device for previous_device in previous_devices):
+                new_device_index = inferred_index
+                new_device = candidate
+
+        if new_device is not None:
+            result["device_index"] = new_device_index
+            result["loaded_device_name"] = new_device.name
+            result["class_name"] = new_device.class_name
+
+        return result
+
+    def _load_browser_item_onto_track(
+        self,
+        track,
+        browser_item,
+        mode,
+        track_index,
+        requested_name=None,
+        requested_uri=None,
+    ):
+        previous_devices = list(track.devices)
+        self.song().view.selected_track = track
+        self.application().browser.load_item(browser_item)
+        return self._build_track_load_result(
+            track,
+            previous_devices,
+            mode=mode,
+            track_index=track_index,
+            requested_name=requested_name,
+            requested_uri=requested_uri,
+        )

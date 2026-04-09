@@ -130,6 +130,58 @@ def create_arrangement_midi_clip(track_index: int, start_time: float, length: fl
     )
 
 
+@mcp.tool(description=get_command_spec("create_arrangement_audio_clip").tool_description)
+def create_arrangement_audio_clip(track_index: int, file_path: str, start_time: float):
+    return _invoke(
+        "create_arrangement_audio_clip",
+        {"track_index": track_index, "file_path": file_path, "start_time": start_time},
+    )
+
+
+@mcp.tool(description=get_command_spec("delete_arrangement_clip").tool_description)
+def delete_arrangement_clip(
+    track_index: int,
+    clip_index: Optional[int] = None,
+    start_time: Optional[float] = None,
+):
+    params = {"track_index": track_index}
+    if clip_index is not None:
+        params["clip_index"] = clip_index
+    if start_time is not None:
+        params["start_time"] = start_time
+    return _invoke("delete_arrangement_clip", params)
+
+
+@mcp.tool(description=get_command_spec("resize_arrangement_clip").tool_description)
+def resize_arrangement_clip(
+    track_index: int,
+    length: float,
+    clip_index: Optional[int] = None,
+    start_time: Optional[float] = None,
+):
+    params = {"track_index": track_index, "length": length}
+    if clip_index is not None:
+        params["clip_index"] = clip_index
+    if start_time is not None:
+        params["start_time"] = start_time
+    return _invoke("resize_arrangement_clip", params)
+
+
+@mcp.tool(description=get_command_spec("move_arrangement_clip").tool_description)
+def move_arrangement_clip(
+    track_index: int,
+    new_start_time: float,
+    clip_index: Optional[int] = None,
+    start_time: Optional[float] = None,
+):
+    params = {"track_index": track_index, "new_start_time": new_start_time}
+    if clip_index is not None:
+        params["clip_index"] = clip_index
+    if start_time is not None:
+        params["start_time"] = start_time
+    return _invoke("move_arrangement_clip", params)
+
+
 @mcp.tool(description=get_command_spec("add_notes_to_arrangement_clip").tool_description)
 def add_notes_to_arrangement_clip(
     track_index: int,
@@ -157,6 +209,54 @@ def get_arrangement_clip_notes(
     if start_time is not None:
         params["start_time"] = start_time
     return _invoke("get_arrangement_clip_notes", params)
+
+
+@mcp.tool(description=get_command_spec("duplicate_to_arrangement").tool_description)
+def duplicate_to_arrangement(track_index: int, slot_index: int, start_time: Optional[float] = None):
+    params = {"track_index": track_index, "slot_index": slot_index}
+    if start_time is not None:
+        params["start_time"] = start_time
+    return _invoke("duplicate_to_arrangement", params)
+
+
+@mcp.tool(description=get_command_spec("get_browser_tree").tool_description)
+def get_browser_tree(category_type: str = "all"):
+    return _invoke("get_browser_tree", {"category_type": category_type})
+
+
+@mcp.tool(description=get_command_spec("get_browser_items_at_path").tool_description)
+def get_browser_items_at_path(path: str = ""):
+    return _invoke("get_browser_items_at_path", {"path": path})
+
+
+@mcp.tool(description=get_command_spec("search_browser").tool_description)
+def search_browser(query: str, category: str = "all"):
+    return _invoke("search_browser", {"query": query, "category": category})
+
+
+@mcp.tool(description=get_command_spec("load_instrument_or_effect").tool_description)
+def load_instrument_or_effect(
+    track_index: int,
+    device_name: Optional[str] = None,
+    native_device_name: Optional[str] = None,
+    uri: Optional[str] = None,
+    target_index: Optional[int] = None,
+):
+    params = {"track_index": track_index}
+    if device_name is not None:
+        params["device_name"] = device_name
+    if native_device_name is not None:
+        params["native_device_name"] = native_device_name
+    if uri is not None:
+        params["uri"] = uri
+    if target_index is not None:
+        params["target_index"] = target_index
+    return _invoke("load_instrument_or_effect", params)
+
+
+@mcp.tool(description=get_command_spec("load_drum_kit").tool_description)
+def load_drum_kit(track_index: int, rack_uri: str):
+    return _invoke("load_drum_kit", {"track_index": track_index, "rack_uri": rack_uri})
 
 
 @mcp.tool(description=get_command_spec("get_track_devices").tool_description)
