@@ -33,3 +33,30 @@ class ServerRegistrationTests(unittest.TestCase):
         self.assertEqual("health_check", result["command"])
         self.assertIn("stability", result)
         self.assertEqual({"ok": True}, result["result"])
+
+    def test_create_arrangement_audio_clip_wrapper_forwards_expected_params(self):
+        with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
+            result = ableton_server.create_arrangement_audio_clip(2, "/tmp/test.wav", 64.0)
+        invoke_mock.assert_called_once_with(
+            "create_arrangement_audio_clip",
+            {"track_index": 2, "file_path": "/tmp/test.wav", "start_time": 64.0},
+        )
+        self.assertEqual({"ok": True}, result)
+
+    def test_move_arrangement_clip_wrapper_uses_optional_selector(self):
+        with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
+            result = ableton_server.move_arrangement_clip(3, 88.0, start_time=80.0)
+        invoke_mock.assert_called_once_with(
+            "move_arrangement_clip",
+            {"track_index": 3, "new_start_time": 88.0, "start_time": 80.0},
+        )
+        self.assertEqual({"ok": True}, result)
+
+    def test_duplicate_to_arrangement_wrapper_forwards_expected_params(self):
+        with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
+            result = ableton_server.duplicate_to_arrangement(1, 0, start_time=96.0)
+        invoke_mock.assert_called_once_with(
+            "duplicate_to_arrangement",
+            {"track_index": 1, "slot_index": 0, "start_time": 96.0},
+        )
+        self.assertEqual({"ok": True}, result)

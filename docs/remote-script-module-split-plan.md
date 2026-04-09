@@ -12,11 +12,13 @@ This split has now been started in code:
 - the domain operations now live in the existing `*_ops.py` mixin modules
 - the command surface is mirrored in `mcp_server/command_specs.py` for MCP tool generation and audit tracking
 - core session and arrangement note flows have now been runtime-validated in Ableton Live 12
+- Arrangement Batch 2 has now runtime-validated arrangement audio import plus arrangement resize, MIDI move, and session-to-arrangement duplication
 
 Remaining work:
 - broader runtime validation inside Ableton Live 12 beyond the now-confirmed clip/note flows
 - replacing the long `elif` dispatcher with a registry only after behavior audits settle
 - deeper review of provisional domains like browser loading, take lanes, and plugin-window behavior
+- any future design for arrangement undo guarantees or audio-clip move behavior
 
 ## Why split now
 

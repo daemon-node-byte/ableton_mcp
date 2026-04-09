@@ -141,13 +141,37 @@ The following commands are documented as locally verified on `2026-04-09` in [do
 - `add_notes_to_clip`
 - `get_arrangement_clips`
 - `create_arrangement_midi_clip`
+- `create_arrangement_audio_clip`
+- `delete_arrangement_clip`
+- `resize_arrangement_clip`
+- `move_arrangement_clip`
 - `add_notes_to_arrangement_clip`
 - `get_arrangement_clip_notes`
+- `duplicate_to_arrangement`
 
 Verified note round trips:
 
 - Session View: create temporary MIDI clip, add 3 notes, read the same 3 notes back, delete the clip
 - Arrangement View: create temporary arrangement MIDI clip, add 3 notes, read the same 3 notes back, delete the clip
+
+Verified arrangement editing and import flow:
+
+- Audio import: inserted `/System/Library/Sounds/Funk.aiff` onto a disposable audio track with `create_arrangement_audio_clip`, confirmed placement with `get_arrangement_clips`, then removed it with `delete_arrangement_clip`
+- MIDI edit flow: resized and moved a disposable arrangement MIDI clip, confirmed note preservation after the move, then cleaned it up
+- Session-to-arrangement flow: duplicated a disposable Session View MIDI clip into Arrangement View and confirmed the duplicated note data with `get_arrangement_clip_notes`
+
+Verified negative cases:
+
+- `create_arrangement_audio_clip` rejects MIDI tracks, missing `file_path`, relative paths, and nonexistent absolute paths
+- `resize_arrangement_clip` rejects non-positive lengths and ambiguous selectors
+- `move_arrangement_clip` is now explicitly documented as MIDI-only in this pass
+
+Repeatable validation helper:
+
+```bash
+uv run --python 3.11 python scripts/validate_arrangement_batch_2.py \
+  --audio-file /absolute/path/to/audio-file.wav
+```
 
 ### Exposed now, but not yet verified end to end
 
@@ -163,12 +187,11 @@ These are already part of the current MCP surface or dispatcher, but the docs st
 
 From [docs/manual-validation-backlog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/manual-validation-backlog.md), the main unfinished or not-yet-validated areas are:
 
-- arrangement audio clip flow with real file paths
 - native device insertion via `Track.insert_device(...)`
 - browser URI loading and related browser workflows
 - take lane workflows
 - plugin-window behavior
-- remaining arrangement MIDI edge cases such as `resize_arrangement_clip`, `move_arrangement_clip`, `duplicate_to_arrangement`, and undo behavior
+- remaining arrangement undo behavior and any future audio-clip move strategy
 
 ## First-Class MCP Tools
 
@@ -190,8 +213,13 @@ The current first-class MCP tools are:
 - `add_notes_to_clip`
 - `get_arrangement_clips`
 - `create_arrangement_midi_clip`
+- `create_arrangement_audio_clip`
+- `delete_arrangement_clip`
+- `resize_arrangement_clip`
+- `move_arrangement_clip`
 - `add_notes_to_arrangement_clip`
 - `get_arrangement_clip_notes`
+- `duplicate_to_arrangement`
 - `get_track_devices`
 - `get_device_parameters`
 - `set_device_parameter_by_name`

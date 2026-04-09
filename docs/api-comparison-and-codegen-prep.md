@@ -10,6 +10,7 @@ This repo now has:
 - a real Python MCP server package under `mcp_server/`
 - a canonical command registry in `mcp_server/command_specs.py`
 - a thinner Remote Script entrypoint that delegates behavior into domain modules
+- a repeatable Live validation helper at `scripts/validate_arrangement_batch_2.py` for the current arrangement batch
 
 Several previously suspicious contracts were also corrected against the official Live Object Model:
 - `get_cpu_load` now reads `Application.average_process_usage`
@@ -19,6 +20,12 @@ Several previously suspicious contracts were also corrected against the official
 - `create_take_lane` now uses `Track.create_take_lane()`
 - `create_midi_clip_in_lane` now uses `TakeLane.create_midi_clip(start_time, length)`
 - `load_instrument_or_effect` now prefers `Track.insert_device(...)` for native devices and keeps browser URI loading as a provisional path
+
+New Live-backed validation result from this pass:
+- arrangement audio import, arrangement delete, arrangement resize, arrangement MIDI move, and session-to-arrangement duplication all passed direct Live 12 validation on 2026-04-09
+- `create_arrangement_audio_clip` now explicitly requires an absolute existing `file_path`
+- `delete_arrangement_clip`, `resize_arrangement_clip`, and `move_arrangement_clip` now require exactly one selector: `clip_index` or `start_time`
+- `move_arrangement_clip` is intentionally scoped to MIDI clips only
 
 ## Context
 
@@ -208,7 +215,7 @@ This will help codegen avoid pretending uncertain code is production-ready.
 
 Update on 2026-04-09:
 - this classification now exists in `mcp_server/command_specs.py`
-- a first set of commands has been promoted to `confirmed` after direct Ableton Live 12 validation, including core session clip note flows and arrangement MIDI note flows
+- a broader arrangement slice has now been promoted to `confirmed` after direct Ableton Live 12 validation, including arrangement audio import, arrangement delete, arrangement resize, arrangement MIDI move, and session-to-arrangement duplication
 
 ### 4. Add strict command contracts
 Every command should have:

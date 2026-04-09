@@ -130,6 +130,58 @@ def create_arrangement_midi_clip(track_index: int, start_time: float, length: fl
     )
 
 
+@mcp.tool(description=get_command_spec("create_arrangement_audio_clip").tool_description)
+def create_arrangement_audio_clip(track_index: int, file_path: str, start_time: float):
+    return _invoke(
+        "create_arrangement_audio_clip",
+        {"track_index": track_index, "file_path": file_path, "start_time": start_time},
+    )
+
+
+@mcp.tool(description=get_command_spec("delete_arrangement_clip").tool_description)
+def delete_arrangement_clip(
+    track_index: int,
+    clip_index: Optional[int] = None,
+    start_time: Optional[float] = None,
+):
+    params = {"track_index": track_index}
+    if clip_index is not None:
+        params["clip_index"] = clip_index
+    if start_time is not None:
+        params["start_time"] = start_time
+    return _invoke("delete_arrangement_clip", params)
+
+
+@mcp.tool(description=get_command_spec("resize_arrangement_clip").tool_description)
+def resize_arrangement_clip(
+    track_index: int,
+    length: float,
+    clip_index: Optional[int] = None,
+    start_time: Optional[float] = None,
+):
+    params = {"track_index": track_index, "length": length}
+    if clip_index is not None:
+        params["clip_index"] = clip_index
+    if start_time is not None:
+        params["start_time"] = start_time
+    return _invoke("resize_arrangement_clip", params)
+
+
+@mcp.tool(description=get_command_spec("move_arrangement_clip").tool_description)
+def move_arrangement_clip(
+    track_index: int,
+    new_start_time: float,
+    clip_index: Optional[int] = None,
+    start_time: Optional[float] = None,
+):
+    params = {"track_index": track_index, "new_start_time": new_start_time}
+    if clip_index is not None:
+        params["clip_index"] = clip_index
+    if start_time is not None:
+        params["start_time"] = start_time
+    return _invoke("move_arrangement_clip", params)
+
+
 @mcp.tool(description=get_command_spec("add_notes_to_arrangement_clip").tool_description)
 def add_notes_to_arrangement_clip(
     track_index: int,
@@ -157,6 +209,14 @@ def get_arrangement_clip_notes(
     if start_time is not None:
         params["start_time"] = start_time
     return _invoke("get_arrangement_clip_notes", params)
+
+
+@mcp.tool(description=get_command_spec("duplicate_to_arrangement").tool_description)
+def duplicate_to_arrangement(track_index: int, slot_index: int, start_time: Optional[float] = None):
+    params = {"track_index": track_index, "slot_index": slot_index}
+    if start_time is not None:
+        params["start_time"] = start_time
+    return _invoke("duplicate_to_arrangement", params)
 
 
 @mcp.tool(description=get_command_spec("get_track_devices").tool_description)

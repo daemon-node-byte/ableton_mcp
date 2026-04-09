@@ -18,8 +18,13 @@ Local Ableton Live 12 runtime validation on 2026-04-09 confirmed that the curren
 - `add_notes_to_clip` plus `get_clip_notes`
 - `get_arrangement_clips`
 - `create_arrangement_midi_clip`
+- `create_arrangement_audio_clip`
+- `delete_arrangement_clip`
+- `resize_arrangement_clip`
+- `move_arrangement_clip`
 - `add_notes_to_arrangement_clip`
 - `get_arrangement_clip_notes`
+- `duplicate_to_arrangement`
 
 The note-write and note-read paths required real bug fixes during validation:
 
@@ -27,6 +32,12 @@ The note-write and note-read paths required real bug fixes during validation:
 - `get_notes_extended(...)` needed the Live argument order `from_pitch, pitch_span, from_time, time_span`
 
 These are now fixed in the current codebase and reflected in the command registry as `confirmed` for the commands listed above.
+
+Additional arrangement-specific validation notes from this pass:
+- audio import was verified with the absolute path `/System/Library/Sounds/Funk.aiff`
+- `move_arrangement_clip` is now intentionally documented as MIDI-only
+- negative cases were verified for missing or relative `file_path`, nonexistent audio files, ambiguous selectors, and non-positive resize lengths
+- undo behavior remains intentionally undocumented until it is directly validated
 
 ## Executive summary
 

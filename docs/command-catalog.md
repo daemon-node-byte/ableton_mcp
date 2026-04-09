@@ -47,12 +47,17 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 - `add_notes_to_clip`
 - `get_arrangement_clips`
 - `create_arrangement_midi_clip`
+- `create_arrangement_audio_clip`
+- `delete_arrangement_clip`
+- `resize_arrangement_clip`
+- `move_arrangement_clip`
 - `add_notes_to_arrangement_clip`
 - `get_arrangement_clip_notes`
+- `duplicate_to_arrangement`
 
 ### MCP exposure in this pass
 - First-class MCP tools:
-  `health_check`, `get_session_info`, `get_current_song_time`, `set_current_song_time`, `set_tempo`, `start_playback`, `stop_playback`, `get_all_track_names`, `get_track_info`, `create_midi_track`, `create_audio_track`, `create_clip`, `get_clip_notes`, `add_notes_to_clip`, `get_arrangement_clips`, `create_arrangement_midi_clip`, `add_notes_to_arrangement_clip`, `get_arrangement_clip_notes`, `get_track_devices`, `get_device_parameters`, `set_device_parameter_by_name`, `get_device_parameter_by_name`
+  `health_check`, `get_session_info`, `get_current_song_time`, `set_current_song_time`, `set_tempo`, `start_playback`, `stop_playback`, `get_all_track_names`, `get_track_info`, `create_midi_track`, `create_audio_track`, `create_clip`, `get_clip_notes`, `add_notes_to_clip`, `get_arrangement_clips`, `create_arrangement_midi_clip`, `create_arrangement_audio_clip`, `delete_arrangement_clip`, `resize_arrangement_clip`, `move_arrangement_clip`, `add_notes_to_arrangement_clip`, `get_arrangement_clip_notes`, `duplicate_to_arrangement`, `get_track_devices`, `get_device_parameters`, `set_device_parameter_by_name`, `get_device_parameter_by_name`
 - All other commands are still callable through the development escape hatch tool `ableton_raw_command(...)`.
 
 ### Important implementation corrections now reflected in code
@@ -211,18 +216,20 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `get_arrangement_clips` | List arrangement clips for one track | confirmed |
 | `get_all_arrangement_clips` | List arrangement clips across tracks | plausible |
 | `create_arrangement_midi_clip` | Create MIDI clip in arrangement | confirmed |
-| `create_arrangement_audio_clip` | Create audio clip in arrangement | high risk |
-| `delete_arrangement_clip` | Delete arrangement clip | needs audit |
-| `resize_arrangement_clip` | Resize arrangement clip | needs audit |
-| `move_arrangement_clip` | Move arrangement clip | needs audit |
+| `create_arrangement_audio_clip` | Create audio clip in arrangement | confirmed |
+| `delete_arrangement_clip` | Delete arrangement clip | confirmed |
+| `resize_arrangement_clip` | Resize arrangement clip | confirmed |
+| `move_arrangement_clip` | Move arrangement clip | confirmed |
 | `add_notes_to_arrangement_clip` | Add MIDI notes to arrangement clip | confirmed |
 | `get_arrangement_clip_notes` | Read notes from arrangement clip | confirmed |
-| `duplicate_to_arrangement` | Copy session clip to arrangement | needs audit |
+| `duplicate_to_arrangement` | Copy session clip to arrangement | confirmed |
 
 ### Notes
 - This is one of the most important domains in the project.
-- `create_arrangement_audio_clip` is strategically important and now uses the official `file_path + start_time` contract.
-- `move_arrangement_clip` currently appears to recreate clips, which is believable but should be audited for data loss and audio behavior.
+- `create_arrangement_audio_clip` is strategically important and is now Live-validated with an absolute existing `file_path` on an audio track.
+- `delete_arrangement_clip`, `resize_arrangement_clip`, and `move_arrangement_clip` now require exactly one selector: `clip_index` or `start_time`.
+- `move_arrangement_clip` remains MIDI-only in this pass because Live still does not expose a direct audio clip move API.
+- Arrangement undo behavior is still not validated enough to document as supported.
 
 ---
 

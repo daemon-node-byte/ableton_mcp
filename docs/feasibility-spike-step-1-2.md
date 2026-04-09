@@ -14,11 +14,12 @@ Important updates:
 - `duplicate_to_arrangement` now uses `Track.duplicate_clip_to_arrangement(...)`
 - take-lane handling now assumes `Track.create_take_lane()` and `TakeLane.create_midi_clip(start_time, length)` where available
 - the arrangement MIDI note round trip is now Live-validated for `get_arrangement_clips`, `create_arrangement_midi_clip`, `add_notes_to_arrangement_clip`, and `get_arrangement_clip_notes`
+- Arrangement Batch 2 has now Live-validated `create_arrangement_audio_clip`, `delete_arrangement_clip`, `resize_arrangement_clip`, `move_arrangement_clip`, and `duplicate_to_arrangement`
 
 What still requires Live-backed validation has not changed:
 - actual undo behavior
-- overlap and failure semantics
-- audio import edge cases
+- any future audio-clip move strategy
+- broader browser/device/take-lane domains
 - view/selection side effects
 
 ## Scope
@@ -143,10 +144,8 @@ Step 1 has now passed its basic runtime validation loop in a real Ableton Live 1
 
 The remaining Step 1 questions are now narrower:
 - undo behavior
-- resize semantics
-- move semantics
-- duplicate-to-arrangement behavior
-- edge cases around overlap and invalid targets
+- overlap behavior under more complex real-world timelines
+- any unexpected view or selection side effects
 
 ## Step 2. Arrangement audio clip insertion
 
@@ -218,6 +217,22 @@ Step 2 is successful if all of the following are true in Live 12:
 Step 2 should also be treated as a runtime verification task, but with a stronger emphasis on file-path and media-contract testing.
 This is likely the higher-risk item of the two.
 
+### Validation update
+
+Step 2 has now passed a real Live 12 runtime validation loop:
+
+1. `create_arrangement_audio_clip` inserted `/System/Library/Sounds/Funk.aiff` onto a disposable audio track at the requested arrangement time.
+2. `get_arrangement_clips` confirmed the imported clip placement.
+3. `delete_arrangement_clip` removed the imported clip during cleanup.
+4. negative cases were confirmed for MIDI-track targeting, missing `file_path`, relative paths, and nonexistent absolute paths.
+
+### Remaining Step 2 work
+
+The remaining Step 2 questions are now narrower:
+- undo behavior
+- documenting default warp and marker behavior in more detail if it becomes product-relevant
+- deciding whether audio clip move support should remain explicitly unsupported or gain a future safe implementation path
+
 ## New understanding of the repo
 
 The research document proposed a feasibility spike because arrangement insertion was still partly speculative.
@@ -234,6 +249,11 @@ This repo already appears to be aiming at a much richer Live 12 control surface 
 
 So the practical next step is not more abstract planning.
 It is a targeted runtime validation pass that proves which of these implemented commands are real, stable, and production-worthy.
+
+That targeted pass has now advanced the arrangement domain further:
+- arrangement audio import is no longer speculative
+- arrangement resize, move, and duplicate flows are no longer just dispatcher claims
+- the remaining arrangement risk is mostly around undo semantics and audio-move policy, not basic feasibility
 
 ## Recommended test matrix for Step 1 and 2
 

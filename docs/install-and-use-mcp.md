@@ -184,8 +184,13 @@ The current first-class MCP tools include:
 - `add_notes_to_clip`
 - `get_arrangement_clips`
 - `create_arrangement_midi_clip`
+- `create_arrangement_audio_clip`
+- `delete_arrangement_clip`
+- `resize_arrangement_clip`
+- `move_arrangement_clip`
 - `add_notes_to_arrangement_clip`
 - `get_arrangement_clip_notes`
+- `duplicate_to_arrangement`
 - `get_track_devices`
 - `get_device_parameters`
 - `set_device_parameter_by_name`
@@ -214,14 +219,39 @@ The following commands have been verified against a real local Ableton Live 12 s
 - `add_notes_to_clip`
 - `get_arrangement_clips`
 - `create_arrangement_midi_clip`
+- `create_arrangement_audio_clip`
+- `delete_arrangement_clip`
+- `resize_arrangement_clip`
+- `move_arrangement_clip`
 - `add_notes_to_arrangement_clip`
 - `get_arrangement_clip_notes`
+- `duplicate_to_arrangement`
 
 The session and arrangement note flows were validated as full round trips:
 - create temporary clip
 - add 3 MIDI notes
 - read the same 3 notes back
 - delete the temporary clip
+
+Arrangement Batch 2 runtime validation also confirmed:
+- audio import with `create_arrangement_audio_clip` using the absolute path `/System/Library/Sounds/Funk.aiff`
+- cleanup with `delete_arrangement_clip`
+- MIDI clip resize and move with note preservation
+- session-to-arrangement duplication with note readback verification
+- negative-case validation for missing or relative `file_path`, nonexistent audio files, ambiguous selectors, non-positive resize lengths, and audio clip move rejection
+
+Repeatable validation helper:
+
+```bash
+uv run --python 3.11 python scripts/validate_arrangement_batch_2.py \
+  --audio-file /absolute/path/to/audio-file.wav
+```
+
+Important current contract notes:
+- `create_arrangement_audio_clip` requires an absolute existing `file_path`
+- `delete_arrangement_clip`, `resize_arrangement_clip`, and `move_arrangement_clip` require exactly one selector: `clip_index` or `start_time`
+- `move_arrangement_clip` is currently MIDI-only
+- undo behavior for these arrangement mutations is still not documented as verified
 
 ## 9. Common problems
 
