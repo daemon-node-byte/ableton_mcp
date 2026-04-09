@@ -1,5 +1,13 @@
 # AbletonMCP (another mcp for Ableton Live) v0.1.0-beta
 
+[![Version v0.1.0-beta](https://img.shields.io/badge/version-v0.1.0--beta-blue)](README.md)
+[![Ableton Live 12](https://img.shields.io/badge/Ableton%20Live-12-000000)](docs/install-and-use-mcp.md)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](docs/install-and-use-mcp.md)
+[![MCP stdio](https://img.shields.io/badge/MCP-stdio-2E8B57)](docs/install-and-use-mcp.md)
+[![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](docs/install-and-use-mcp.md)
+[![Core Flows Verified](https://img.shields.io/badge/Live%20Validation-core%20flows%20verified-brightgreen)](docs/command-catalog.md)
+[![Status Audit Heavy](https://img.shields.io/badge/status-audit--heavy-orange)](docs/manual-validation-backlog.md)
+
 AbletonMCP is a Python-first MCP server for Ableton Live 12.
 
 It has two parts:
