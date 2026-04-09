@@ -1,42 +1,33 @@
 # Docs
 
-This folder holds the project research, planning, and refactor-prep documents for AbletonMCP_v2.
+This folder holds the practical setup docs, the command reference, and the archived planning notes for AbletonMCP_v2.
 
-## Current docs
+## Start Here
 
-- `ableton_live_mcp_discoveries.md`
-  - broader research on the current Ableton MCP landscape and Live 12 capability assumptions
+- [README.md](/Users/joshmclain/code/AbletonMCP_v2/README.md)
+  - project overview, current status, and quick-start summary
+- [install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md)
+  - canonical setup, runtime usage, validators, and troubleshooting
+- [command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md)
+  - canonical command inventory grouped by domain
 
-- `feasibility-spike-step-1-2.md`
-  - focused notes for arrangement MIDI and arrangement audio feasibility review
+## Operational Docs
 
-- `api-comparison-and-codegen-prep.md`
-  - compares the current Remote Script command surface against what Ableton Live 12 appears to expose, and frames the repo for code generation
+- [manual-validation-backlog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/manual-validation-backlog.md)
+  - the next high-value Live validation targets
 
-- `command-catalog.md`
-  - formal catalog of the current dispatcher command surface
+## Archived Research and Planning
 
-- `remote-script-module-split-plan.md`
-  - plan for splitting the monolithic Remote Script into domain modules safely
+- [ableton_live_mcp_discoveries.md](/Users/joshmclain/code/AbletonMCP_v2/docs/ableton_live_mcp_discoveries.md)
+  - ecosystem research and long-range product reasoning
+- [api-comparison-and-codegen-prep.md](/Users/joshmclain/code/AbletonMCP_v2/docs/api-comparison-and-codegen-prep.md)
+  - why the current command surface was treated as a believable baseline
+- [feasibility-spike-step-1-2.md](/Users/joshmclain/code/AbletonMCP_v2/docs/feasibility-spike-step-1-2.md)
+  - historical record of the arrangement feasibility spike
+- [remote-script-module-split-plan.md](/Users/joshmclain/code/AbletonMCP_v2/docs/remote-script-module-split-plan.md)
+  - the preservation-first plan for continuing the Remote Script split
 
-- `manual-validation-backlog.md`
-  - prioritized Live 12 runtime validation backlog for the highest-risk domains
+## Source of Truth Notes
 
-- `install-and-use-mcp.md`
-  - practical instructions for installing the Remote Script, running the MCP server locally or in Docker, and wiring it into an MCP client
-
-## Repo structure note
-
-- `AGENTS.md` stays in the repo root on purpose so future agents and tooling can discover it immediately.
-- Build-up docs live here in `docs/` so the repo root stays cleaner.
-- `mcp_server/command_specs.py` is now the Python-side source of truth for command metadata, stability labels, and MCP exposure.
-
-## Suggested reading order
-
-1. `ableton_live_mcp_discoveries.md`
-2. `api-comparison-and-codegen-prep.md`
-3. `command-catalog.md`
-4. `remote-script-module-split-plan.md`
-5. `install-and-use-mcp.md`
-
-If you are about to do implementation work, read `../AGENTS.md` first.
+- `mcp_server/command_specs.py` is the exact source of truth for MCP exposure, parameter metadata, and stability labels.
+- `AGENTS.md` in the repo root is the implementation guidance for future agents and contributors.

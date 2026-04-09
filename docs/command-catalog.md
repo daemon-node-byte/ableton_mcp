@@ -1,88 +1,37 @@
 # AbletonMCP_v2 Command Catalog
 
-Date: 2026-04-09
-Source: current dispatcher in `AbletonMCP_Remote_Script/__init__.py`
-Purpose: canonical command surface for refactoring, MCP tool generation, and implementation audits
+This is the canonical inventory of commands exposed by the current Remote Script dispatcher.
 
-Python-side source of truth:
-- `mcp_server/command_specs.py`
+Use this doc for:
 
-## Status note
+- command names grouped by domain
+- quick-read purpose notes
+- broad readiness shorthand
 
-This catalog reflects the **intended** command surface currently exposed by the Remote Script dispatcher.
-It does **not** guarantee that every implementation is complete or correct.
+Use [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py) for exact parameter metadata, MCP exposure, and canonical stability labels.
 
-Recommended interpretation:
-- use this as the public capability map
-- preserve it during refactors unless there is a deliberate migration decision
-- treat implementation status as provisional unless marked `confirmed` from direct Live validation
-- use `mcp_server/command_specs.py` for the current stability label and MCP exposure state
+## How to Read This
 
-## Conventions
+- `confirmed` means directly validated against a real Ableton Live 12 session
+- everything else is still a repo-level estimate and should be treated with appropriate caution
+- commands not promoted to first-class MCP tools are still reachable through `ableton_raw_command(...)`
 
-### Execution style
-Commands fall into two broad groups:
-- **read-style** commands, which generally return data immediately
-- **write-style** commands, which are generally wrapped in `_schedule_and_wait(...)` to execute safely on Ableton's main thread
+## Validation Snapshot
 
-### Canonical stability labels now used in code
-- **confirmed**: directly validated against a real Ableton Live 12 session
-- **likely-complete**: repo review plus official API docs suggest the implementation is directionally sound
-- **partial**: command exists and is useful, but known edge cases or contract issues remain
-- **stub**: intentional placeholder or best-effort fallback
-- **unverified**: present in the surface but not trusted yet
+Direct Live validation currently covers:
 
-### Runtime validation snapshot
-Validated locally in Ableton Live 12 on 2026-04-09:
-- `health_check`
-- `get_session_info`
-- `get_current_song_time`
-- `get_all_track_names`
-- `get_track_info`
-- `create_midi_track`
-- `delete_track`
-- `create_clip`
-- `delete_clip`
-- `get_clip_notes`
-- `add_notes_to_clip`
-- `get_arrangement_clips`
-- `create_arrangement_midi_clip`
-- `create_arrangement_audio_clip`
-- `delete_arrangement_clip`
-- `resize_arrangement_clip`
-- `move_arrangement_clip`
-- `add_notes_to_arrangement_clip`
-- `get_arrangement_clip_notes`
-- `duplicate_to_arrangement`
-- `get_browser_tree`
-- `get_browser_items_at_path`
-- `search_browser`
-- `load_instrument_or_effect`
-- `load_drum_kit`
+- connectivity and session inspection
+- Session View clip and note round trips
+- Arrangement View clip creation, edit, delete, import, and duplication
+- browser discovery and validated built-in loading
 
-### MCP exposure in this pass
-- First-class MCP tools:
-  `health_check`, `get_session_info`, `get_current_song_time`, `set_current_song_time`, `set_tempo`, `start_playback`, `stop_playback`, `get_all_track_names`, `get_track_info`, `create_midi_track`, `create_audio_track`, `create_clip`, `get_clip_notes`, `add_notes_to_clip`, `get_arrangement_clips`, `create_arrangement_midi_clip`, `create_arrangement_audio_clip`, `delete_arrangement_clip`, `resize_arrangement_clip`, `move_arrangement_clip`, `add_notes_to_arrangement_clip`, `get_arrangement_clip_notes`, `duplicate_to_arrangement`, `get_track_devices`, `get_device_parameters`, `set_device_parameter_by_name`, `get_device_parameter_by_name`, `get_browser_tree`, `get_browser_items_at_path`, `search_browser`, `load_instrument_or_effect`, `load_drum_kit`
-- All other commands are still callable through the development escape hatch tool `ableton_raw_command(...)`.
-
-### Important implementation corrections now reflected in code
-- `get_cpu_load` now uses `Application.average_process_usage`
-- `get_session_path` now uses `Song.file_path`
-- `get_arrangement_length` now uses `Song.song_length` with clip-end fallback
-- `create_arrangement_audio_clip` now follows the Live API contract `Track.create_audio_clip(file_path, position)`
-- `create_take_lane` now uses `Track.create_take_lane()`
-- `create_midi_clip_in_lane` now follows `TakeLane.create_midi_clip(start_time, length)`
-- `load_instrument_or_effect` now prefers `Track.insert_device(...)` for native Live devices, requires exactly one source, and has been Live-validated for built-in native instrument names plus discovered built-in instrument URIs
-
----
+For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md).
 
 ## 1. Health
 
 | Command | Purpose | Status |
 |---|---|---|
 | `health_check` | Basic connectivity / session sanity check | confirmed |
-
----
 
 ## 2. Session / transport / song
 
@@ -126,10 +75,9 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `get_arrangement_length` | Return arrangement length | needs audit |
 
 ### Notes
-- `get_cpu_load` and `get_session_path` were corrected in the current implementation to use official Live API properties.
-- locator creation/deletion may need special care because the current code appears to rely on `set_or_delete_cue()` in a way that may not be precise enough.
 
----
+- `get_cpu_load` and `get_session_path` were corrected to use official Live API properties.
+- locator creation/deletion may still need closer runtime verification.
 
 ## 3. Tracks
 
@@ -170,8 +118,6 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `select_track` | Select track in Live view | plausible |
 | `get_selected_track` | Return selected track | plausible |
 
----
-
 ## 4. Master / cue / meters
 
 | Command | Purpose | Status |
@@ -182,8 +128,6 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `get_master_output_meter` | Read output meter | plausible |
 | `get_cue_volume` | Read cue volume | plausible |
 | `set_cue_volume` | Set cue volume | plausible |
-
----
 
 ## 5. Session View clips
 
@@ -212,8 +156,6 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `set_clip_automation` | Write clip automation/envelope data | high risk |
 | `clear_clip_automation` | Clear clip automation/envelope data | needs audit |
 
----
-
 ## 6. Arrangement View clips
 
 | Command | Purpose | Status |
@@ -230,13 +172,11 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `duplicate_to_arrangement` | Copy session clip to arrangement | confirmed |
 
 ### Notes
-- This is one of the most important domains in the project.
-- `create_arrangement_audio_clip` is strategically important and is now Live-validated with an absolute existing `file_path` on an audio track.
-- `delete_arrangement_clip`, `resize_arrangement_clip`, and `move_arrangement_clip` now require exactly one selector: `clip_index` or `start_time`.
-- `move_arrangement_clip` remains MIDI-only in this pass because Live still does not expose a direct audio clip move API.
-- Arrangement undo behavior is still not validated enough to document as supported.
 
----
+- `create_arrangement_audio_clip` is validated with an absolute existing `file_path` on an audio track.
+- `delete_arrangement_clip`, `resize_arrangement_clip`, and `move_arrangement_clip` require exactly one selector: `clip_index` or `start_time`.
+- `move_arrangement_clip` remains MIDI-only in this pass.
+- arrangement undo behavior is still not documented as supported.
 
 ## 7. Scenes
 
@@ -252,8 +192,6 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `duplicate_scene` | Duplicate scene | plausible |
 | `select_scene` | Select scene | plausible |
 | `get_selected_scene` | Return selected scene | plausible |
-
----
 
 ## 8. Devices and parameters
 
@@ -276,13 +214,11 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `get_selected_device` | Return selected device | plausible |
 
 ### Notes
-- `get_device_parameters` explicitly acknowledges that third-party plugin parameters may require manual Configure in Live before they appear.
-- That is a good assumption and should be preserved in docs and tool design.
-- `show_plugin_window` / `hide_plugin_window` are now explicitly treated as partial because the current implementation only manipulates device-chain collapse state.
-- `load_instrument_or_effect` now has a safer native-device insertion path for Live 12.3+, requires exactly one of `device_name`, `native_device_name`, or `uri`, and has been runtime-validated for built-in native instrument names plus discovered built-in instrument URIs.
-- `target_index` validation is now explicit and only applies to native device insertion, not browser URI loading.
 
----
+- third-party plugin parameters may still require manual Configure in Live before they appear.
+- `show_plugin_window` and `hide_plugin_window` are still best-effort device-view helpers, not proven plugin editor control.
+- `load_instrument_or_effect` has a validated native insert path plus a validated built-in browser URI path.
+- `target_index` only applies to native insertion, not browser URI loading.
 
 ## 9. Racks and chains
 
@@ -296,12 +232,6 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `set_chain_solo` | Solo chain | plausible |
 | `set_chain_volume` | Set chain volume | plausible |
 
-### Notes
-- Nested rack handling is an important differentiator for this project.
-- These commands are good candidates for early modularization into `rack_ops.py`.
-
----
-
 ## 10. Drum rack
 
 | Command | Purpose | Status |
@@ -310,8 +240,6 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `set_drum_rack_pad_note` | Remap pad note | needs audit |
 | `set_drum_rack_pad_mute` | Mute pad | plausible |
 | `set_drum_rack_pad_solo` | Solo pad | plausible |
-
----
 
 ## 11. Browser
 
@@ -323,13 +251,11 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `load_drum_kit` | Load drum kit by URI/path | likely-complete |
 
 ### Notes
-- Browser support is strategically important.
-- Browser discovery is now directly validated in Live 12 across the normalized top-level categories.
-- `search_browser` now rejects blank queries instead of recursively crawling the whole browser.
-- `load_drum_kit` is now validated for discovered built-in drum-kit preset URIs and explicitly rejects the generic `Drum Rack` device entry.
-- Third-party plugin URIs and broader effect-loading behavior remain separate backlog items.
 
----
+- browser discovery is directly validated in Live 12 across the normalized top-level categories.
+- `search_browser` rejects blank queries instead of crawling the whole browser.
+- `load_drum_kit` is validated for discovered built-in drum-kit preset URIs and rejects the generic `Drum Rack` device entry.
+- third-party plugin URIs and broader effect-loading behavior remain backlog work.
 
 ## 12. Take lanes (Live 12+)
 
@@ -343,10 +269,9 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `delete_take_lane` | Delete take lane | high risk |
 
 ### Notes
-- The implementation has been corrected to use `Track.create_take_lane()` when available.
-- This domain should be treated as experimental until audited.
 
----
+- the implementation now uses `Track.create_take_lane()` when available.
+- this domain should still be treated as experimental until it gets direct runtime coverage.
 
 ## 13. View / selection / UI focus
 
@@ -358,56 +283,3 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `show_session_view` | Focus Session view | plausible |
 | `show_detail_view` | Show detail view variant | plausible |
 | `get_arrangement_length` | Read arrangement length | needs audit |
-
----
-
-## Command counts by domain
-
-| Domain | Count |
-|---|---:|
-| Health | 1 |
-| Session / transport / song | 31 |
-| Tracks | 28 |
-| Master / cue | 6 |
-| Session clips | 19 |
-| Arrangement clips | 10 |
-| Scenes | 9 |
-| Devices / parameters | 14 |
-| Racks / chains | 7 |
-| Drum rack | 4 |
-| Browser | 4 |
-| Take lanes | 6 |
-| View / selection | 6 |
-| **Total** | **145** |
-
-## Recommended next artifacts
-
-Based on this catalog, the most useful next docs/codegen helpers are:
-
-1. `command-status-audit.md`
-   - mark each command as confirmed, likely-complete, partial, stub, or unverified
-
-2. `command-schemas.md`
-   - define params and result shapes for each command family
-
-3. modular refactor plan
-   - map each command family to a future module
-
-## Recommended next refactor split
-
-- `song_ops.py` → Health + Session/transport
-- `track_ops.py` → Tracks + Master
-- `session_clip_ops.py` → Session clips
-- `arrangement_ops.py` → Arrangement clips
-- `scene_ops.py` → Scenes
-- `device_ops.py` → Devices
-- `rack_ops.py` → Racks + Drum Rack
-- `browser_ops.py` → Browser
-- `take_lane_ops.py` → Take lanes
-- `view_ops.py` → View/selection
-
-## Bottom line
-
-This dispatcher already defines a large and credible command surface.
-It is a strong enough public capability map to anchor the next code generation pass.
-The main work now is not inventing commands, but auditing and organizing them without losing coverage.
