@@ -1,0 +1,216 @@
+"""FastMCP server for AbletonMCP v2."""
+
+from __future__ import absolute_import, print_function, unicode_literals
+
+import os
+from typing import Any, Dict, List, Optional
+
+from mcp.server.fastmcp import FastMCP
+
+from .client import AbletonRemoteClient
+from .command_specs import FIRST_CLASS_MCP_COMMANDS, get_command_spec
+
+
+JsonDict = Dict[str, Any]
+NoteList = List[Dict[str, Any]]
+
+
+def _make_client():
+    return AbletonRemoteClient.from_env()
+
+
+def _invoke(command_name, params):
+    get_command_spec(command_name)
+    client = _make_client()
+    return client.send_command(command_name, params)
+
+
+mcp = FastMCP(
+    "ableton-mcp-v2",
+    instructions=(
+        "Ableton Live 12 MCP server backed by the AbletonMCP Remote Script over TCP. "
+        "Only the audited tool slice is exposed as first-class MCP tools in this pass; "
+        "use ableton_raw_command for the wider command surface."
+    ),
+)
+
+
+@mcp.tool(description=get_command_spec("health_check").tool_description)
+def health_check():
+    return _invoke("health_check", {})
+
+
+@mcp.tool(description=get_command_spec("get_session_info").tool_description)
+def get_session_info():
+    return _invoke("get_session_info", {})
+
+
+@mcp.tool(description=get_command_spec("get_current_song_time").tool_description)
+def get_current_song_time():
+    return _invoke("get_current_song_time", {})
+
+
+@mcp.tool(description=get_command_spec("set_current_song_time").tool_description)
+def set_current_song_time(time: float):
+    return _invoke("set_current_song_time", {"time": time})
+
+
+@mcp.tool(description=get_command_spec("set_tempo").tool_description)
+def set_tempo(tempo: float):
+    return _invoke("set_tempo", {"tempo": tempo})
+
+
+@mcp.tool(description=get_command_spec("start_playback").tool_description)
+def start_playback():
+    return _invoke("start_playback", {})
+
+
+@mcp.tool(description=get_command_spec("stop_playback").tool_description)
+def stop_playback():
+    return _invoke("stop_playback", {})
+
+
+@mcp.tool(description=get_command_spec("get_all_track_names").tool_description)
+def get_all_track_names():
+    return _invoke("get_all_track_names", {})
+
+
+@mcp.tool(description=get_command_spec("get_track_info").tool_description)
+def get_track_info(track_index: int):
+    return _invoke("get_track_info", {"track_index": track_index})
+
+
+@mcp.tool(description=get_command_spec("create_midi_track").tool_description)
+def create_midi_track(index: Optional[int] = None):
+    params = {}
+    if index is not None:
+        params["index"] = index
+    return _invoke("create_midi_track", params)
+
+
+@mcp.tool(description=get_command_spec("create_audio_track").tool_description)
+def create_audio_track(index: Optional[int] = None):
+    params = {}
+    if index is not None:
+        params["index"] = index
+    return _invoke("create_audio_track", params)
+
+
+@mcp.tool(description=get_command_spec("create_clip").tool_description)
+def create_clip(track_index: int, slot_index: int, length: float = 4.0):
+    return _invoke(
+        "create_clip",
+        {"track_index": track_index, "slot_index": slot_index, "length": length},
+    )
+
+
+@mcp.tool(description=get_command_spec("get_clip_notes").tool_description)
+def get_clip_notes(track_index: int, slot_index: int):
+    return _invoke("get_clip_notes", {"track_index": track_index, "slot_index": slot_index})
+
+
+@mcp.tool(description=get_command_spec("add_notes_to_clip").tool_description)
+def add_notes_to_clip(track_index: int, slot_index: int, notes: NoteList):
+    return _invoke(
+        "add_notes_to_clip",
+        {"track_index": track_index, "slot_index": slot_index, "notes": notes},
+    )
+
+
+@mcp.tool(description=get_command_spec("get_arrangement_clips").tool_description)
+def get_arrangement_clips(track_index: int):
+    return _invoke("get_arrangement_clips", {"track_index": track_index})
+
+
+@mcp.tool(description=get_command_spec("create_arrangement_midi_clip").tool_description)
+def create_arrangement_midi_clip(track_index: int, start_time: float, length: float = 4.0):
+    return _invoke(
+        "create_arrangement_midi_clip",
+        {"track_index": track_index, "start_time": start_time, "length": length},
+    )
+
+
+@mcp.tool(description=get_command_spec("add_notes_to_arrangement_clip").tool_description)
+def add_notes_to_arrangement_clip(
+    track_index: int,
+    notes: NoteList,
+    clip_index: Optional[int] = None,
+    start_time: Optional[float] = None,
+):
+    params = {"track_index": track_index, "notes": notes}
+    if clip_index is not None:
+        params["clip_index"] = clip_index
+    if start_time is not None:
+        params["start_time"] = start_time
+    return _invoke("add_notes_to_arrangement_clip", params)
+
+
+@mcp.tool(description=get_command_spec("get_arrangement_clip_notes").tool_description)
+def get_arrangement_clip_notes(
+    track_index: int,
+    clip_index: Optional[int] = None,
+    start_time: Optional[float] = None,
+):
+    params = {"track_index": track_index}
+    if clip_index is not None:
+        params["clip_index"] = clip_index
+    if start_time is not None:
+        params["start_time"] = start_time
+    return _invoke("get_arrangement_clip_notes", params)
+
+
+@mcp.tool(description=get_command_spec("get_track_devices").tool_description)
+def get_track_devices(track_index: int):
+    return _invoke("get_track_devices", {"track_index": track_index})
+
+
+@mcp.tool(description=get_command_spec("get_device_parameters").tool_description)
+def get_device_parameters(track_index: int, device_index: int):
+    return _invoke(
+        "get_device_parameters",
+        {"track_index": track_index, "device_index": device_index},
+    )
+
+
+@mcp.tool(description=get_command_spec("set_device_parameter_by_name").tool_description)
+def set_device_parameter_by_name(track_index: int, device_index: int, name: str, value: float):
+    return _invoke(
+        "set_device_parameter_by_name",
+        {"track_index": track_index, "device_index": device_index, "name": name, "value": value},
+    )
+
+
+@mcp.tool(description=get_command_spec("get_device_parameter_by_name").tool_description)
+def get_device_parameter_by_name(track_index: int, device_index: int, name: str):
+    return _invoke(
+        "get_device_parameter_by_name",
+        {"track_index": track_index, "device_index": device_index, "name": name},
+    )
+
+
+@mcp.tool(
+    description=(
+        "Call any cataloged Ableton Remote Script command directly. "
+        "Returns command metadata alongside the raw command result."
+    )
+)
+def ableton_raw_command(type: str, params: Optional[JsonDict] = None):
+    spec = get_command_spec(type)
+    result = _invoke(type, params or {})
+    return {
+        "command": type,
+        "domain": spec.domain,
+        "stability": spec.stability,
+        "mcp_exposed": spec.mcp_exposed,
+        "result": result,
+    }
+
+
+def main():
+    transport = os.environ.get("ABLETON_MCP_TRANSPORT", "stdio")
+    if transport not in ("stdio", "sse", "streamable-http"):
+        raise ValueError("Unsupported ABLETON_MCP_TRANSPORT '{}'".format(transport))
+    mcp.run(transport=transport)
+
+
+__all__ = ["FIRST_CLASS_MCP_COMMANDS", "ableton_raw_command", "main", "mcp"]
