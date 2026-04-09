@@ -72,6 +72,16 @@ class _CoreHarness(CoreOpsMixin):
     pass
 
 
+class _FakeNotesClip(object):
+    def __init__(self):
+        self.extended_calls = []
+        self.length = 4.0
+
+    def get_notes_extended(self, from_pitch, pitch_span, from_time, time_span):
+        self.extended_calls.append((from_pitch, pitch_span, from_time, time_span))
+        return [{"pitch": 60, "start_time": 0.0, "duration": 0.5, "velocity": 100, "mute": False}]
+
+
 class RemoteScriptContractTests(unittest.TestCase):
     def test_create_arrangement_audio_clip_uses_file_path_and_start_time(self):
         track = _FakeAudioTrack()
@@ -129,3 +139,10 @@ class RemoteScriptContractTests(unittest.TestCase):
             ],
             payload,
         )
+
+    def test_get_clip_notes_raw_uses_live_extended_argument_order(self):
+        harness = _CoreHarness()
+        clip = _FakeNotesClip()
+        result = harness._get_clip_notes_raw(clip)
+        self.assertEqual([(0, 128, 0.0, 4.0)], clip.extended_calls)
+        self.assertEqual(60, result[0]["pitch"])

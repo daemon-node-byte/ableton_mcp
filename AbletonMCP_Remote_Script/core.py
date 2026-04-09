@@ -113,7 +113,7 @@ class CoreOpsMixin(object):
 
     def _get_clip_notes_raw(self, clip):
         try:
-            return clip.get_notes_extended(0, clip.length, 0, 128)
+            return clip.get_notes_extended(0, 128, 0.0, clip.length)
         except AttributeError:
             return clip.get_notes(0, 0, clip.length, 128)
 
