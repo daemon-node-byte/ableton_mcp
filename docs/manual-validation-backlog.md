@@ -24,6 +24,11 @@ Confirmed locally in Ableton Live 12:
 - `add_notes_to_arrangement_clip`
 - `get_arrangement_clip_notes`
 - `duplicate_to_arrangement`
+- `get_browser_tree`
+- `get_browser_items_at_path`
+- `search_browser`
+- `load_instrument_or_effect`
+- `load_drum_kit`
 
 Arrangement Batch 2 notes:
 - `create_arrangement_audio_clip` was validated with the absolute path `/System/Library/Sounds/Funk.aiff`
@@ -31,41 +36,34 @@ Arrangement Batch 2 notes:
 - the disposable validation run restored the set to the original 4-track state after cleanup
 - undo behavior was intentionally not documented as verified
 
+Browser and loading batch notes:
+- browser discovery was validated against the running Live browser with `get_browser_tree`, `get_browser_items_at_path`, and `search_browser`
+- built-in loading was validated with `load_instrument_or_effect(device_name="Drift")`, `load_instrument_or_effect(uri="query:Synths#Drift")`, and `load_drum_kit(rack_uri="query:Drums#FileId_5422")`
+- negative cases were validated for blank browser queries, unknown categories, missing browser path components, invalid URIs, invalid `target_index`, missing sources, duplicate sources, and generic `Drum Rack` URIs
+- the disposable validation run restored the set to the original 4-track state after cleanup
+
 ## Priority order
 
-1. Native device insertion via `Track.insert_device(...)`
-2. Browser URI loading
-3. Take lanes
-4. Plugin-window behavior
-5. Arrangement undo behavior and any future audio-clip move strategy
+1. Extended browser and device loading beyond the validated built-in slice
+2. Take lanes
+3. Plugin-window behavior
+4. Arrangement undo behavior and any future audio-clip move strategy
 
-## 1. Native device insertion
-
-Validate:
-- `load_instrument_or_effect` with `device_name`
-
-Record:
-- exact device names that succeed
-- index-placement behavior
-- failure behavior for invalid insert positions
-- Live 12.3+ requirement confirmation
-
-## 2. Browser URI loading
+## 1. Extended browser and device loading beyond the validated built-in slice
 
 Validate:
-- `load_instrument_or_effect` with `uri`
-- `load_drum_kit`
-- `get_browser_tree`
-- `get_browser_items_at_path`
-- `search_browser`
+- `load_instrument_or_effect` with built-in audio-effect and MIDI-effect targets
+- `load_instrument_or_effect` with third-party plugin URIs if the browser exposes loadable entries
+- additional browser URI classes beyond the validated built-in instrument and drum-kit flows
+- any insert-position semantics that matter for non-instrument content classes
 
 Record:
-- URIs tested
-- whether `get_item_by_uri` resolves reliably
-- which content classes are loadable
+- exact content classes and URIs tested
+- whether effect insertion behaves differently from instrument insertion
+- whether third-party plugin URIs are loadable or need separate handling
 - any platform-specific issues
 
-## 3. Take lanes
+## 2. Take lanes
 
 Validate:
 - `create_take_lane`
@@ -79,7 +77,7 @@ Record:
 - whether take-lane creation has side effects
 - how take-lane clip enumeration behaves after comping and recording
 
-## 4. Plugin-window behavior
+## 3. Plugin-window behavior
 
 Validate:
 - `show_plugin_window`
@@ -90,7 +88,7 @@ Record:
 - whether any actual plugin editor visibility changes occur
 - whether command names should be narrowed or aliased in a future pass
 
-## 5. Remaining arrangement residuals
+## 4. Remaining arrangement residuals
 
 Validate:
 - undo behavior after `create_arrangement_audio_clip`

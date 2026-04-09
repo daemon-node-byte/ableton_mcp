@@ -60,3 +60,36 @@ class ServerRegistrationTests(unittest.TestCase):
             {"track_index": 1, "slot_index": 0, "start_time": 96.0},
         )
         self.assertEqual({"ok": True}, result)
+
+    def test_get_browser_tree_wrapper_forwards_expected_params(self):
+        with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
+            result = ableton_server.get_browser_tree("instruments")
+        invoke_mock.assert_called_once_with("get_browser_tree", {"category_type": "instruments"})
+        self.assertEqual({"ok": True}, result)
+
+    def test_search_browser_wrapper_forwards_expected_params(self):
+        with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
+            result = ableton_server.search_browser("drift", "instruments")
+        invoke_mock.assert_called_once_with(
+            "search_browser",
+            {"query": "drift", "category": "instruments"},
+        )
+        self.assertEqual({"ok": True}, result)
+
+    def test_load_instrument_or_effect_wrapper_forwards_expected_params(self):
+        with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
+            result = ableton_server.load_instrument_or_effect(2, device_name="Drift", target_index=0)
+        invoke_mock.assert_called_once_with(
+            "load_instrument_or_effect",
+            {"track_index": 2, "device_name": "Drift", "target_index": 0},
+        )
+        self.assertEqual({"ok": True}, result)
+
+    def test_load_drum_kit_wrapper_forwards_expected_params(self):
+        with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
+            result = ableton_server.load_drum_kit(2, "query:Drums#FileId_5422")
+        invoke_mock.assert_called_once_with(
+            "load_drum_kit",
+            {"track_index": 2, "rack_uri": "query:Drums#FileId_5422"},
+        )
+        self.assertEqual({"ok": True}, result)

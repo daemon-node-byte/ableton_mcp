@@ -219,6 +219,46 @@ def duplicate_to_arrangement(track_index: int, slot_index: int, start_time: Opti
     return _invoke("duplicate_to_arrangement", params)
 
 
+@mcp.tool(description=get_command_spec("get_browser_tree").tool_description)
+def get_browser_tree(category_type: str = "all"):
+    return _invoke("get_browser_tree", {"category_type": category_type})
+
+
+@mcp.tool(description=get_command_spec("get_browser_items_at_path").tool_description)
+def get_browser_items_at_path(path: str = ""):
+    return _invoke("get_browser_items_at_path", {"path": path})
+
+
+@mcp.tool(description=get_command_spec("search_browser").tool_description)
+def search_browser(query: str, category: str = "all"):
+    return _invoke("search_browser", {"query": query, "category": category})
+
+
+@mcp.tool(description=get_command_spec("load_instrument_or_effect").tool_description)
+def load_instrument_or_effect(
+    track_index: int,
+    device_name: Optional[str] = None,
+    native_device_name: Optional[str] = None,
+    uri: Optional[str] = None,
+    target_index: Optional[int] = None,
+):
+    params = {"track_index": track_index}
+    if device_name is not None:
+        params["device_name"] = device_name
+    if native_device_name is not None:
+        params["native_device_name"] = native_device_name
+    if uri is not None:
+        params["uri"] = uri
+    if target_index is not None:
+        params["target_index"] = target_index
+    return _invoke("load_instrument_or_effect", params)
+
+
+@mcp.tool(description=get_command_spec("load_drum_kit").tool_description)
+def load_drum_kit(track_index: int, rack_uri: str):
+    return _invoke("load_drum_kit", {"track_index": track_index, "rack_uri": rack_uri})
+
+
 @mcp.tool(description=get_command_spec("get_track_devices").tool_description)
 def get_track_devices(track_index: int):
     return _invoke("get_track_devices", {"track_index": track_index})

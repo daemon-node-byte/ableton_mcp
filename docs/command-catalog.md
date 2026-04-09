@@ -54,10 +54,15 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 - `add_notes_to_arrangement_clip`
 - `get_arrangement_clip_notes`
 - `duplicate_to_arrangement`
+- `get_browser_tree`
+- `get_browser_items_at_path`
+- `search_browser`
+- `load_instrument_or_effect`
+- `load_drum_kit`
 
 ### MCP exposure in this pass
 - First-class MCP tools:
-  `health_check`, `get_session_info`, `get_current_song_time`, `set_current_song_time`, `set_tempo`, `start_playback`, `stop_playback`, `get_all_track_names`, `get_track_info`, `create_midi_track`, `create_audio_track`, `create_clip`, `get_clip_notes`, `add_notes_to_clip`, `get_arrangement_clips`, `create_arrangement_midi_clip`, `create_arrangement_audio_clip`, `delete_arrangement_clip`, `resize_arrangement_clip`, `move_arrangement_clip`, `add_notes_to_arrangement_clip`, `get_arrangement_clip_notes`, `duplicate_to_arrangement`, `get_track_devices`, `get_device_parameters`, `set_device_parameter_by_name`, `get_device_parameter_by_name`
+  `health_check`, `get_session_info`, `get_current_song_time`, `set_current_song_time`, `set_tempo`, `start_playback`, `stop_playback`, `get_all_track_names`, `get_track_info`, `create_midi_track`, `create_audio_track`, `create_clip`, `get_clip_notes`, `add_notes_to_clip`, `get_arrangement_clips`, `create_arrangement_midi_clip`, `create_arrangement_audio_clip`, `delete_arrangement_clip`, `resize_arrangement_clip`, `move_arrangement_clip`, `add_notes_to_arrangement_clip`, `get_arrangement_clip_notes`, `duplicate_to_arrangement`, `get_track_devices`, `get_device_parameters`, `set_device_parameter_by_name`, `get_device_parameter_by_name`, `get_browser_tree`, `get_browser_items_at_path`, `search_browser`, `load_instrument_or_effect`, `load_drum_kit`
 - All other commands are still callable through the development escape hatch tool `ableton_raw_command(...)`.
 
 ### Important implementation corrections now reflected in code
@@ -67,7 +72,7 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 - `create_arrangement_audio_clip` now follows the Live API contract `Track.create_audio_clip(file_path, position)`
 - `create_take_lane` now uses `Track.create_take_lane()`
 - `create_midi_clip_in_lane` now follows `TakeLane.create_midi_clip(start_time, length)`
-- `load_instrument_or_effect` now prefers `Track.insert_device(...)` for native Live devices and keeps URI loading as provisional
+- `load_instrument_or_effect` now prefers `Track.insert_device(...)` for native Live devices, requires exactly one source, and has been Live-validated for built-in native instrument names plus discovered built-in instrument URIs
 
 ---
 
@@ -265,7 +270,7 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 | `move_device` | Reorder device on track | plausible |
 | `show_plugin_window` | Show/select plugin window | needs audit |
 | `hide_plugin_window` | Hide/collapse plugin window | needs audit |
-| `load_instrument_or_effect` | Load browser item onto track | high risk |
+| `load_instrument_or_effect` | Load browser item onto track | likely-complete |
 | `get_device_class_name` | Return device class | plausible |
 | `select_device` | Select device | plausible |
 | `get_selected_device` | Return selected device | plausible |
@@ -274,7 +279,8 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 - `get_device_parameters` explicitly acknowledges that third-party plugin parameters may require manual Configure in Live before they appear.
 - That is a good assumption and should be preserved in docs and tool design.
 - `show_plugin_window` / `hide_plugin_window` are now explicitly treated as partial because the current implementation only manipulates device-chain collapse state.
-- `load_instrument_or_effect` now has a safer native-device insertion path for Live 12.3+ and keeps browser URI loading as provisional.
+- `load_instrument_or_effect` now has a safer native-device insertion path for Live 12.3+, requires exactly one of `device_name`, `native_device_name`, or `uri`, and has been runtime-validated for built-in native instrument names plus discovered built-in instrument URIs.
+- `target_index` validation is now explicit and only applies to native device insertion, not browser URI loading.
 
 ---
 
@@ -311,14 +317,17 @@ Validated locally in Ableton Live 12 on 2026-04-09:
 
 | Command | Purpose | Status |
 |---|---|---|
-| `get_browser_tree` | List browser categories/tree | plausible |
-| `get_browser_items_at_path` | Navigate browser by path | plausible |
-| `search_browser` | Search browser subtree | needs audit |
-| `load_drum_kit` | Load drum kit by URI/path | high risk |
+| `get_browser_tree` | List browser categories/tree | confirmed |
+| `get_browser_items_at_path` | Navigate browser by path | confirmed |
+| `search_browser` | Search browser subtree | confirmed |
+| `load_drum_kit` | Load drum kit by URI/path | likely-complete |
 
 ### Notes
 - Browser support is strategically important.
-- It is also one of the first areas likely to break if the generated code guessed incorrectly about browser APIs.
+- Browser discovery is now directly validated in Live 12 across the normalized top-level categories.
+- `search_browser` now rejects blank queries instead of recursively crawling the whole browser.
+- `load_drum_kit` is now validated for discovered built-in drum-kit preset URIs and explicitly rejects the generic `Drum Rack` device entry.
+- Third-party plugin URIs and broader effect-loading behavior remain separate backlog items.
 
 ---
 

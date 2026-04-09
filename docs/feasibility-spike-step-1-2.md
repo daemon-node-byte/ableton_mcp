@@ -15,11 +15,13 @@ Important updates:
 - take-lane handling now assumes `Track.create_take_lane()` and `TakeLane.create_midi_clip(start_time, length)` where available
 - the arrangement MIDI note round trip is now Live-validated for `get_arrangement_clips`, `create_arrangement_midi_clip`, `add_notes_to_arrangement_clip`, and `get_arrangement_clip_notes`
 - Arrangement Batch 2 has now Live-validated `create_arrangement_audio_clip`, `delete_arrangement_clip`, `resize_arrangement_clip`, `move_arrangement_clip`, and `duplicate_to_arrangement`
+- browser discovery is now Live-validated for `get_browser_tree`, `get_browser_items_at_path`, and `search_browser`
+- built-in browser loading is now Live-validated for `load_instrument_or_effect` with native names and discovered built-in instrument URIs, plus `load_drum_kit` with discovered built-in drum-kit preset URIs
 
 What still requires Live-backed validation has not changed:
 - actual undo behavior
 - any future audio-clip move strategy
-- broader browser/device/take-lane domains
+- third-party plugin URIs, broader effect-loading behavior, and take-lane domains
 - view/selection side effects
 
 ## Scope
@@ -254,6 +256,8 @@ That targeted pass has now advanced the arrangement domain further:
 - arrangement audio import is no longer speculative
 - arrangement resize, move, and duplicate flows are no longer just dispatcher claims
 - the remaining arrangement risk is mostly around undo semantics and audio-move policy, not basic feasibility
+- browser discovery is also no longer speculative for this repo's Live 12 build
+- built-in instrument and drum-kit loading now have direct runtime proof, leaving third-party and wider content classes as the main remaining browser-loading question
 
 ## Recommended test matrix for Step 1 and 2
 

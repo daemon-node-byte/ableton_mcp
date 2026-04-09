@@ -19,29 +19,12 @@ class BrowserOpsMixin(object):
         return info
 
     def _get_browser_tree(self, params):
-        browser = self.application().browser
         category = str(params.get("category_type", "all")).lower()
-        category_map = {
-            "instruments": browser.instruments,
-            "audio_effects": browser.audio_effects,
-            "midi_effects": browser.midi_effects,
-            "drums": browser.drums,
-            "sounds": browser.sounds,
-            "samples": browser.samples,
-            "all": None,
-        }
+        roots = self._available_browser_roots()
 
         if category == "all":
             result = {}
-            for key, root in [
-                ("instruments", browser.instruments),
-                ("audio_effects", browser.audio_effects),
-                ("midi_effects", browser.midi_effects),
-                ("drums", browser.drums),
-                ("sounds", browser.sounds),
-                ("packs", browser.packs),
-                ("user_library", browser.user_library),
-            ]:
+            for key, root in roots.items():
                 try:
                     children = list(root.children)[:15]
                     result[key] = [
@@ -52,25 +35,13 @@ class BrowserOpsMixin(object):
                     pass
             return result
 
-        root = category_map.get(category)
-        if root is None:
-            raise ValueError("Unknown category: {}".format(category))
+        root = self._get_browser_root(category)
         return self._get_browser_item_info(root, max_depth=2)
 
     def _get_browser_items_at_path(self, params):
         path = str(params.get("path", ""))
-        browser = self.application().browser
         parts = [part.strip() for part in path.split("/") if part.strip()]
-        top_map = {
-            "instruments": browser.instruments,
-            "audio_effects": browser.audio_effects,
-            "midi_effects": browser.midi_effects,
-            "drums": browser.drums,
-            "sounds": browser.sounds,
-            "samples": browser.samples,
-            "packs": browser.packs,
-            "user_library": browser.user_library,
-        }
+        top_map = self._available_browser_roots()
 
         if not parts:
             items = []
@@ -81,9 +52,7 @@ class BrowserOpsMixin(object):
                     pass
             return {"items": items, "path": ""}
 
-        current = top_map.get(parts[0].lower())
-        if current is None:
-            raise ValueError("Unknown browser root: {}".format(parts[0]))
+        current = self._get_browser_root(parts[0])
 
         for part in parts[1:]:
             found = None
@@ -106,9 +75,10 @@ class BrowserOpsMixin(object):
         return {"items": items, "path": path}
 
     def _search_browser(self, params):
-        query = str(params.get("query", "")).lower()
+        query = str(params.get("query", "")).strip().lower()
+        if not query:
+            raise ValueError("search_browser requires a non-empty query")
         category = str(params.get("category", "all")).lower()
-        browser = self.application().browser
         results = []
 
         def search_children(item, depth=0):
@@ -121,21 +91,17 @@ class BrowserOpsMixin(object):
                             "name": child.name,
                             "uri": child.uri if hasattr(child, "uri") else "",
                             "is_loadable": child.is_loadable if hasattr(child, "is_loadable") else False,
+                            "is_device": child.is_device if hasattr(child, "is_device") else False,
                         })
                     if hasattr(child, "children"):
                         search_children(child, depth + 1)
             except Exception:
                 pass
 
-        roots_to_search = []
-        if category == "all" or category == "instruments":
-            roots_to_search.append(browser.instruments)
-        if category == "all" or category == "audio_effects":
-            roots_to_search.append(browser.audio_effects)
-        if category == "all" or category == "drums":
-            roots_to_search.append(browser.drums)
-        if category == "all" or category == "sounds":
-            roots_to_search.append(browser.sounds)
+        if category == "all":
+            roots_to_search = list(self._available_browser_roots().values())
+        else:
+            roots_to_search = [self._get_browser_root(category)]
 
         for root in roots_to_search:
             search_children(root)
@@ -147,10 +113,18 @@ class BrowserOpsMixin(object):
         rack_uri = str(params.get("rack_uri", "")).strip()
         if not rack_uri:
             raise ValueError("Must provide rack_uri")
-        browser = self.application().browser
-        self.song().view.selected_track = track
-        item = browser.get_item_by_uri(rack_uri) if hasattr(browser, "get_item_by_uri") else None
-        if item is None:
-            raise ValueError("Browser item not found for URI: {}".format(rack_uri))
-        browser.load_item(item)
-        return {"ok": True, "loaded": rack_uri, "stability": "unverified"}
+        item = self._resolve_browser_item_by_uri(rack_uri, "load_drum_kit")
+        if not getattr(item, "is_loadable", False):
+            raise ValueError("load_drum_kit requires a loadable drum-kit preset URI")
+        if getattr(item, "is_device", False):
+            raise ValueError("load_drum_kit requires a drum-kit preset URI, not a generic device entry")
+        result = self._load_browser_item_onto_track(
+            track,
+            item,
+            mode="drum_kit_load",
+            track_index=params["track_index"],
+            requested_uri=rack_uri,
+        )
+        result["loaded"] = rack_uri
+        result["stability"] = "likely-complete"
+        return result

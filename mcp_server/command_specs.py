@@ -91,6 +91,11 @@ FIRST_CLASS_MCP_COMMANDS = (
     "get_device_parameters",
     "set_device_parameter_by_name",
     "get_device_parameter_by_name",
+    "get_browser_tree",
+    "get_browser_items_at_path",
+    "search_browser",
+    "load_instrument_or_effect",
+    "load_drum_kit",
 )
 
 
@@ -231,7 +236,7 @@ _COMMAND_SPECS = [
     _spec("move_device", "device", required=("track_index", "device_index", "new_index"), result="{ok, new_index}", write=True, stability="likely-complete"),
     _spec("show_plugin_window", "device", required=("track_index", "device_index"), result="{ok, device_name, mode, stability}", write=True, stability="partial", notes="Best-effort device view expansion only."),
     _spec("hide_plugin_window", "device", required=("track_index", "device_index"), result="{ok, device_name, mode, stability}", write=True, stability="partial", notes="Best-effort device view collapse only."),
-    _spec("load_instrument_or_effect", "device", required=("track_index",), optional=("device_name", "native_device_name", "target_index", "uri"), result="{ok, mode, ...}", write=True, stability="partial", notes="Native device insertion is safer than browser URI loading."),
+    _spec("load_instrument_or_effect", "device", required=("track_index",), optional=("device_name", "native_device_name", "target_index", "uri"), result="{ok, mode, device_count_before, device_count_after, ...}", write=True, stability="likely-complete", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 for built-in native instrument names and discovered built-in instrument URIs. Requires exactly one source."),
     _spec("get_device_class_name", "device", required=("track_index", "device_index"), result="{class_name, name}", stability="likely-complete"),
     _spec("select_device", "device", required=("track_index", "device_index"), result="{ok, device_name}", write=True, stability="likely-complete"),
     _spec("get_selected_device", "device", result="{selected, track_index, device_index, name, class_name}", stability="likely-complete"),
@@ -248,10 +253,10 @@ _COMMAND_SPECS = [
     _spec("set_drum_rack_pad_mute", "rack", required=("track_index", "device_index", "note", "mute"), result="{note, mute}", write=True, stability="likely-complete"),
     _spec("set_drum_rack_pad_solo", "rack", required=("track_index", "device_index", "note", "solo"), result="{note, solo}", write=True, stability="likely-complete"),
 
-    _spec("get_browser_tree", "browser", optional=("category_type",), result="browser tree snapshot", stability="likely-complete"),
-    _spec("get_browser_items_at_path", "browser", optional=("path",), result="{items[], path}", stability="likely-complete"),
-    _spec("search_browser", "browser", optional=("query", "category"), result="{query, results[], count}", stability="partial"),
-    _spec("load_drum_kit", "browser", required=("track_index", "rack_uri"), result="{ok, loaded, stability}", write=True, stability="partial"),
+    _spec("get_browser_tree", "browser", optional=("category_type",), result="browser tree snapshot", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 across the normalized top-level browser categories."),
+    _spec("get_browser_items_at_path", "browser", optional=("path",), result="{items[], path}", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 for top-level browser navigation, including instruments and drums."),
+    _spec("search_browser", "browser", optional=("query", "category"), result="{query, results[], count}", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09. Requires a non-empty query."),
+    _spec("load_drum_kit", "browser", required=("track_index", "rack_uri"), result="{ok, loaded, device_count_before, device_count_after, ...}", write=True, stability="likely-complete", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 for discovered built-in drum-kit preset URIs. Generic Drum Rack device entries remain rejected."),
 
     _spec("get_take_lanes", "take_lane", required=("track_index",), result="{take_lanes[], available}", stability="likely-complete"),
     _spec("create_take_lane", "take_lane", required=("track_index",), result="{ok, name, stability}", write=True, stability="likely-complete", notes="Corrected to Track.create_take_lane()."),

@@ -148,6 +148,11 @@ The following commands are documented as locally verified on `2026-04-09` in [do
 - `add_notes_to_arrangement_clip`
 - `get_arrangement_clip_notes`
 - `duplicate_to_arrangement`
+- `get_browser_tree`
+- `get_browser_items_at_path`
+- `search_browser`
+- `load_instrument_or_effect`
+- `load_drum_kit`
 
 Verified note round trips:
 
@@ -160,17 +165,31 @@ Verified arrangement editing and import flow:
 - MIDI edit flow: resized and moved a disposable arrangement MIDI clip, confirmed note preservation after the move, then cleaned it up
 - Session-to-arrangement flow: duplicated a disposable Session View MIDI clip into Arrangement View and confirmed the duplicated note data with `get_arrangement_clip_notes`
 
+Verified browser discovery and built-in loading flow:
+
+- Browser discovery: confirmed `get_browser_tree`, `get_browser_items_at_path("instruments")`, `get_browser_items_at_path("drums")`, and `search_browser("drift", "instruments")` against the running Live browser
+- Native insert: loaded `Drift` onto a disposable MIDI track with `load_instrument_or_effect(device_name="Drift")` and confirmed device growth with `get_track_devices`
+- Browser URI instrument load: loaded the discovered URI `query:Synths#Drift` onto a disposable MIDI track with `load_instrument_or_effect(uri=...)`
+- Drum-kit load: loaded the discovered preset URI `query:Drums#FileId_5422` with `load_drum_kit` and confirmed device growth with `get_track_devices`
+
 Verified negative cases:
 
 - `create_arrangement_audio_clip` rejects MIDI tracks, missing `file_path`, relative paths, and nonexistent absolute paths
 - `resize_arrangement_clip` rejects non-positive lengths and ambiguous selectors
 - `move_arrangement_clip` is now explicitly documented as MIDI-only in this pass
+- `search_browser` rejects blank queries
+- `load_instrument_or_effect` rejects missing or duplicate load sources, invalid URIs, and invalid `target_index`
+- `load_drum_kit` rejects the generic `Drum Rack` device URI
 
 Repeatable validation helper:
 
 ```bash
 uv run --python 3.11 python scripts/validate_arrangement_batch_2.py \
   --audio-file /absolute/path/to/audio-file.wav
+```
+
+```bash
+uv run --python 3.11 python scripts/validate_browser_loading_batch.py
 ```
 
 ### Exposed now, but not yet verified end to end
@@ -187,8 +206,8 @@ These are already part of the current MCP surface or dispatcher, but the docs st
 
 From [docs/manual-validation-backlog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/manual-validation-backlog.md), the main unfinished or not-yet-validated areas are:
 
-- native device insertion via `Track.insert_device(...)`
-- browser URI loading and related browser workflows
+- third-party plugin and non-validated browser URI loading beyond the now-confirmed built-in instrument and drum-kit flows
+- broader effect-loading behavior beyond the validated built-in instrument path
 - take lane workflows
 - plugin-window behavior
 - remaining arrangement undo behavior and any future audio-clip move strategy
@@ -224,6 +243,11 @@ The current first-class MCP tools are:
 - `get_device_parameters`
 - `set_device_parameter_by_name`
 - `get_device_parameter_by_name`
+- `get_browser_tree`
+- `get_browser_items_at_path`
+- `search_browser`
+- `load_instrument_or_effect`
+- `load_drum_kit`
 
 Everything else in the current command catalog is still reachable through `ableton_raw_command(...)`, but not all of it should be treated as production-ready yet.
 

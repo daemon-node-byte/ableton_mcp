@@ -25,6 +25,11 @@ Local Ableton Live 12 runtime validation on 2026-04-09 confirmed that the curren
 - `add_notes_to_arrangement_clip`
 - `get_arrangement_clip_notes`
 - `duplicate_to_arrangement`
+- `get_browser_tree`
+- `get_browser_items_at_path`
+- `search_browser`
+- `load_instrument_or_effect`
+- `load_drum_kit`
 
 The note-write and note-read paths required real bug fixes during validation:
 
@@ -38,6 +43,13 @@ Additional arrangement-specific validation notes from this pass:
 - `move_arrangement_clip` is now intentionally documented as MIDI-only
 - negative cases were verified for missing or relative `file_path`, nonexistent audio files, ambiguous selectors, and non-positive resize lengths
 - undo behavior remains intentionally undocumented until it is directly validated
+
+Additional browser/loading validation notes from this pass:
+- browser discovery was verified for the normalized top-level category set through `get_browser_tree`, `get_browser_items_at_path`, and `search_browser`
+- built-in loading was verified with `load_instrument_or_effect(device_name="Drift")`, `load_instrument_or_effect(uri="query:Synths#Drift")`, and `load_drum_kit(rack_uri="query:Drums#FileId_5422")`
+- blank `search_browser` queries are now rejected explicitly
+- `load_instrument_or_effect` now requires exactly one source and only accepts `target_index` for native insertion
+- third-party plugin URIs and broader non-instrument loading classes remain unverified
 
 ## Executive summary
 
@@ -293,6 +305,10 @@ Based on current projects plus the Live Object Model structure, a Python MCP ser
 - browse categories and items
 - load instruments/effects by URI/path if the bridge supports browser APIs
 - import audio files to tracks or clip slots
+
+Local update from 2026-04-09:
+- this repo now has direct Live validation for built-in browser discovery, built-in native instrument insertion, discovered built-in instrument URI loading, and discovered built-in drum-kit preset loading
+- the remaining browser-loading uncertainty is no longer "can browser loading work at all?" but rather "which broader URI/content classes are safe to claim beyond the validated built-in slice?"
 
 #### Automation and envelopes
 - write clip envelopes and automation points where API paths exist

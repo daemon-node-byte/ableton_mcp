@@ -189,39 +189,65 @@ class DeviceOpsMixin(object):
 
     def _load_instrument_or_effect(self, params):
         track = self._get_track(params["track_index"])
-        device_name = str(params.get("device_name", params.get("native_device_name", ""))).strip()
+        sources = []
+        for field_name in ("device_name", "native_device_name", "uri"):
+            field_value = str(params.get(field_name, "")).strip()
+            if field_value:
+                sources.append((field_name, field_value))
+        if len(sources) != 1:
+            raise ValueError(
+                "load_instrument_or_effect requires exactly one of 'device_name', 'native_device_name', or 'uri'"
+            )
+
         target_index = params.get("target_index")
-        if device_name:
+        if target_index is not None:
+            target_index = self._parse_non_negative_int(target_index, "target_index")
+
+        source_name, source_value = sources[0]
+        if source_name in ("device_name", "native_device_name"):
+            device_name = source_value
             if not hasattr(track, "insert_device"):
                 raise ValueError("Track.insert_device is unavailable in this Live version")
-            if target_index is None:
-                track.insert_device(device_name)
-            else:
-                track.insert_device(device_name, int(target_index))
-            return {
-                "ok": True,
-                "mode": "native_device_insert",
-                "device_name": device_name,
-                "track_index": int(params["track_index"]),
-                "target_index": target_index,
-            }
+            if target_index is not None and target_index > len(track.devices):
+                raise ValueError(
+                    "target_index {} out of range for track with {} devices".format(
+                        target_index, len(track.devices)
+                    )
+                )
+            previous_devices = list(track.devices)
+            try:
+                if target_index is None:
+                    track.insert_device(device_name)
+                else:
+                    track.insert_device(device_name, target_index)
+            except Exception as exc:
+                raise ValueError("Failed to insert device '{}': {}".format(device_name, exc))
+            result = self._build_track_load_result(
+                track,
+                previous_devices,
+                mode="native_device_insert",
+                track_index=params["track_index"],
+                requested_name=device_name,
+                target_index=target_index,
+            )
+            result["device_name"] = device_name
+            return result
 
-        uri = str(params.get("uri", "")).strip()
-        if not uri:
-            raise ValueError("Must provide either 'device_name' for native devices or 'uri' for browser loading")
-        browser = self.application().browser
-        browser_item = browser.get_item_by_uri(uri) if hasattr(browser, "get_item_by_uri") else None
-        if browser_item is None:
-            raise ValueError("Browser item not found for URI: {}".format(uri))
-        self.song().view.selected_track = track
-        browser.load_item(browser_item)
-        return {
-            "ok": True,
-            "mode": "browser_uri_load",
-            "uri": uri,
-            "track_index": int(params["track_index"]),
-            "stability": "unverified",
-        }
+        if target_index is not None:
+            raise ValueError("target_index is only supported with native device insertion")
+        uri = source_value
+        browser_item = self._resolve_browser_item_by_uri(uri, "load_instrument_or_effect")
+        if not getattr(browser_item, "is_loadable", False):
+            raise ValueError("load_instrument_or_effect requires a loadable browser item URI")
+        result = self._load_browser_item_onto_track(
+            track,
+            browser_item,
+            mode="browser_uri_load",
+            track_index=params["track_index"],
+            requested_uri=uri,
+        )
+        result["stability"] = "likely-complete"
+        return result
 
     def _get_device_class_name(self, params):
         device = self._get_device(params["track_index"], params["device_index"])

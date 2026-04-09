@@ -11,6 +11,7 @@ This repo now has:
 - a canonical command registry in `mcp_server/command_specs.py`
 - a thinner Remote Script entrypoint that delegates behavior into domain modules
 - a repeatable Live validation helper at `scripts/validate_arrangement_batch_2.py` for the current arrangement batch
+- a repeatable Live validation helper at `scripts/validate_browser_loading_batch.py` for browser discovery and built-in browser-loading flows
 
 Several previously suspicious contracts were also corrected against the official Live Object Model:
 - `get_cpu_load` now reads `Application.average_process_usage`
@@ -19,13 +20,19 @@ Several previously suspicious contracts were also corrected against the official
 - `create_arrangement_audio_clip` now uses `Track.create_audio_clip(file_path, position)`
 - `create_take_lane` now uses `Track.create_take_lane()`
 - `create_midi_clip_in_lane` now uses `TakeLane.create_midi_clip(start_time, length)`
-- `load_instrument_or_effect` now prefers `Track.insert_device(...)` for native devices and keeps browser URI loading as a provisional path
+- `load_instrument_or_effect` now prefers `Track.insert_device(...)` for native devices, requires exactly one source, and shares browser URI resolution helpers with `load_drum_kit`
+- browser discovery now normalizes the top-level category set across `get_browser_tree`, `get_browser_items_at_path`, and `search_browser`
+- `search_browser` now rejects blank queries instead of crawling the full browser tree
+- `load_drum_kit` now explicitly requires a loadable drum-kit preset URI and rejects generic device entries like `Drum Rack`
 
 New Live-backed validation result from this pass:
 - arrangement audio import, arrangement delete, arrangement resize, arrangement MIDI move, and session-to-arrangement duplication all passed direct Live 12 validation on 2026-04-09
 - `create_arrangement_audio_clip` now explicitly requires an absolute existing `file_path`
 - `delete_arrangement_clip`, `resize_arrangement_clip`, and `move_arrangement_clip` now require exactly one selector: `clip_index` or `start_time`
 - `move_arrangement_clip` is intentionally scoped to MIDI clips only
+- browser discovery now passes direct Live 12 validation for `get_browser_tree`, `get_browser_items_at_path`, and `search_browser`
+- built-in device loading now passes direct Live 12 validation for `load_instrument_or_effect` with native names and discovered built-in instrument URIs
+- `load_drum_kit` now passes direct Live 12 validation for discovered built-in drum-kit preset URIs
 
 ## Context
 
@@ -159,8 +166,9 @@ Even if the capability names are believable, these areas are the most likely to 
    - likely depends on exact file import semantics
    - likely platform/path sensitive
 
-2. browser loading methods
-   - custom browser integration often fails at the implementation level even when the API concept is valid
+2. extended browser loading methods
+   - built-in browser discovery and built-in instrument/drum-kit loading are now validated
+   - third-party plugin URIs and wider content classes still need careful runtime proof
 
 3. take lane commands
    - Live 12 feature area, but often less documented in third-party examples

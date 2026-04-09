@@ -195,6 +195,11 @@ The current first-class MCP tools include:
 - `get_device_parameters`
 - `set_device_parameter_by_name`
 - `get_device_parameter_by_name`
+- `get_browser_tree`
+- `get_browser_items_at_path`
+- `search_browser`
+- `load_instrument_or_effect`
+- `load_drum_kit`
 
 There is also a development escape hatch:
 
@@ -226,6 +231,11 @@ The following commands have been verified against a real local Ableton Live 12 s
 - `add_notes_to_arrangement_clip`
 - `get_arrangement_clip_notes`
 - `duplicate_to_arrangement`
+- `get_browser_tree`
+- `get_browser_items_at_path`
+- `search_browser`
+- `load_instrument_or_effect`
+- `load_drum_kit`
 
 The session and arrangement note flows were validated as full round trips:
 - create temporary clip
@@ -240,6 +250,13 @@ Arrangement Batch 2 runtime validation also confirmed:
 - session-to-arrangement duplication with note readback verification
 - negative-case validation for missing or relative `file_path`, nonexistent audio files, ambiguous selectors, non-positive resize lengths, and audio clip move rejection
 
+Browser and instrument loading validation also confirmed:
+- browser discovery with `get_browser_tree`, `get_browser_items_at_path("instruments")`, `get_browser_items_at_path("drums")`, and `search_browser("drift", "instruments")`
+- native instrument insertion with `load_instrument_or_effect(device_name="Drift")`
+- browser URI instrument loading with the discovered built-in URI `query:Synths#Drift`
+- drum-kit loading with the discovered preset URI `query:Drums#FileId_5422`
+- cleanup-backed negative cases for missing load sources, duplicate load sources, invalid URIs, invalid `target_index`, blank search queries, unknown categories, missing browser paths, and generic `Drum Rack` URIs
+
 Repeatable validation helper:
 
 ```bash
@@ -247,10 +264,19 @@ uv run --python 3.11 python scripts/validate_arrangement_batch_2.py \
   --audio-file /absolute/path/to/audio-file.wav
 ```
 
+```bash
+uv run --python 3.11 python scripts/validate_browser_loading_batch.py
+```
+
 Important current contract notes:
 - `create_arrangement_audio_clip` requires an absolute existing `file_path`
 - `delete_arrangement_clip`, `resize_arrangement_clip`, and `move_arrangement_clip` require exactly one selector: `clip_index` or `start_time`
 - `move_arrangement_clip` is currently MIDI-only
+- `get_browser_tree`, `get_browser_items_at_path`, and `search_browser` now share the normalized top-level category set: `all`, `instruments`, `audio_effects`, `midi_effects`, `drums`, `sounds`, `samples`, `packs`, `user_library`
+- `search_browser` requires a non-empty query
+- `load_instrument_or_effect` requires exactly one of `device_name`, `native_device_name`, or `uri`
+- `load_instrument_or_effect` only accepts `target_index` for native device insertion and requires `target_index >= 0`
+- `load_drum_kit` requires a loadable drum-kit preset URI and rejects the generic `Drum Rack` device entry
 - undo behavior for these arrangement mutations is still not documented as verified
 
 ## 9. Common problems
