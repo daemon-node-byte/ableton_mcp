@@ -141,16 +141,43 @@ class CoreOpsMixin(object):
         return notes
 
     def _build_midi_note(self, note_data):
+        pitch = int(note_data["pitch"])
+        start_time = float(note_data.get("time", note_data.get("start_time", 0.0)))
+        duration = float(note_data.get("duration", 0.25))
+        velocity = float(note_data.get("velocity", 100))
+        mute = bool(note_data.get("mute", False))
+
+        if Live is not None and hasattr(Live.Clip, "MidiNoteSpecification"):
+            try:
+                return Live.Clip.MidiNoteSpecification(
+                    pitch=pitch,
+                    start_time=start_time,
+                    duration=duration,
+                    velocity=velocity,
+                    mute=mute,
+                )
+            except TypeError:
+                return Live.Clip.MidiNoteSpecification(
+                    pitch,
+                    start_time,
+                    duration,
+                    velocity,
+                    mute,
+                )
+
         return {
-            "pitch": int(note_data["pitch"]),
-            "start_time": float(note_data.get("time", note_data.get("start_time", 0.0))),
-            "duration": float(note_data.get("duration", 0.25)),
-            "velocity": float(note_data.get("velocity", 100)),
-            "mute": bool(note_data.get("mute", False)),
+            "pitch": pitch,
+            "start_time": start_time,
+            "duration": duration,
+            "velocity": velocity,
+            "mute": mute,
         }
 
     def _build_midi_notes(self, notes_data):
-        return [self._build_midi_note(note) for note in notes_data]
+        notes = [self._build_midi_note(note) for note in notes_data]
+        if Live is not None and hasattr(Live.Clip, "MidiNoteSpecification"):
+            return tuple(notes)
+        return notes
 
     def _routing_display_name(self, routing):
         if routing is None:
