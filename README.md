@@ -1,6 +1,6 @@
 # AbletonMCP
 
-[![Version v0.1.0-beta](https://img.shields.io/badge/version-v0.1.0--beta-blue)](README.md)
+[![Version v0.2-beta.0](https://img.shields.io/badge/version-v0.2--beta.0-blue)](README.md)
 [![Ableton Live 12](https://img.shields.io/badge/Ableton%20Live-12-000000)](docs/install-and-use-mcp.md)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](docs/install-and-use-mcp.md)
 [![MCP stdio](https://img.shields.io/badge/MCP-stdio-2E8B57)](docs/install-and-use-mcp.md)
