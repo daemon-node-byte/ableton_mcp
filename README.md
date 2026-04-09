@@ -1,4 +1,4 @@
-# AbletonMCP (another mcp for Ableton Live) v0.1.0-beta
+# AbletonMCP
 
 [![Version v0.1.0-beta](https://img.shields.io/badge/version-v0.1.0--beta-blue)](README.md)
 [![Ableton Live 12](https://img.shields.io/badge/Ableton%20Live-12-000000)](docs/install-and-use-mcp.md)
