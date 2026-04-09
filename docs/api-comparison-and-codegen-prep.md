@@ -206,6 +206,10 @@ For each command implementation, classify it as one of:
 
 This will help codegen avoid pretending uncertain code is production-ready.
 
+Update on 2026-04-09:
+- this classification now exists in `mcp_server/command_specs.py`
+- a first set of commands has been promoted to `confirmed` after direct Ableton Live 12 validation, including core session clip note flows and arrangement MIDI note flows
+
 ### 4. Add strict command contracts
 Every command should have:
 - required params

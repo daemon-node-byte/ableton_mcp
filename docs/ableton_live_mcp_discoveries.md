@@ -1,8 +1,32 @@
 # Ableton Live 12 MCP Server Research and Development Plan
 
 Status: updated draft
-Date: 2026-04-08
+Date: 2026-04-09
 Target: Python-first MCP server for Ableton Live 12 with deep session, arrangement, device, and plugin control
+
+## Live validation update
+
+Local Ableton Live 12 runtime validation on 2026-04-09 confirmed that the current TCP bridge and MCP-backed Remote Script can successfully perform all of the following against a real running set:
+
+- `health_check`
+- `get_session_info`
+- `get_current_song_time`
+- `get_all_track_names`
+- `get_track_info`
+- `create_midi_track` followed by `delete_track`
+- `create_clip` followed by `delete_clip`
+- `add_notes_to_clip` plus `get_clip_notes`
+- `get_arrangement_clips`
+- `create_arrangement_midi_clip`
+- `add_notes_to_arrangement_clip`
+- `get_arrangement_clip_notes`
+
+The note-write and note-read paths required real bug fixes during validation:
+
+- note creation needed to use the Live Python binding shape that accepts `MidiNoteSpecification` when available
+- `get_notes_extended(...)` needed the Live argument order `from_pitch, pitch_span, from_time, time_span`
+
+These are now fixed in the current codebase and reflected in the command registry as `confirmed` for the commands listed above.
 
 ## Executive summary
 

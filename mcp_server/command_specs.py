@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, Optional, Tuple
 
 
-STABILITY_VALUES = ("likely-complete", "partial", "stub", "unverified")
+STABILITY_VALUES = ("confirmed", "likely-complete", "partial", "stub", "unverified")
 
 
 @dataclass(frozen=True)
@@ -90,10 +90,10 @@ FIRST_CLASS_MCP_COMMANDS = (
 
 
 _COMMAND_SPECS = [
-    _spec("health_check", "health", result="{status, tempo, is_playing, track_count}", stability="likely-complete", exposed=True),
+    _spec("health_check", "health", result="{status, tempo, is_playing, track_count}", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09."),
 
-    _spec("get_session_info", "song", result="session snapshot with tracks, return tracks, and scenes", stability="likely-complete", exposed=True),
-    _spec("get_current_song_time", "song", result="{current_song_time}", stability="likely-complete", exposed=True),
+    _spec("get_session_info", "song", result="session snapshot with tracks, return tracks, and scenes", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09."),
+    _spec("get_current_song_time", "song", result="{current_song_time}", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09."),
     _spec("set_current_song_time", "song", required=("time",), result="{current_song_time}", write=True, stability="likely-complete", exposed=True),
     _spec("set_tempo", "song", required=("tempo",), result="{tempo}", write=True, stability="likely-complete", exposed=True),
     _spec("set_time_signature", "song", optional=("numerator", "denominator"), result="{numerator, denominator}", write=True, stability="likely-complete"),
@@ -129,12 +129,12 @@ _COMMAND_SPECS = [
     _spec("stop_all_clips", "song", result="{ok}", write=True, stability="likely-complete"),
     _spec("get_arrangement_length", "song", result="{arrangement_length}", stability="likely-complete", notes="Backed by Song.song_length with clip-end fallback."),
 
-    _spec("get_track_info", "track", required=("track_index",), result="track details with devices, clip slots, sends", stability="likely-complete", exposed=True),
-    _spec("get_all_track_names", "track", result="{tracks[]}", stability="likely-complete", exposed=True),
-    _spec("create_midi_track", "track", optional=("index",), result="{index, name}", write=True, stability="likely-complete", exposed=True),
+    _spec("get_track_info", "track", required=("track_index",), result="track details with devices, clip slots, sends", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09."),
+    _spec("get_all_track_names", "track", result="{tracks[]}", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09."),
+    _spec("create_midi_track", "track", optional=("index",), result="{index, name}", write=True, stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 with create/delete cleanup."),
     _spec("create_audio_track", "track", optional=("index",), result="{index, name}", write=True, stability="likely-complete", exposed=True),
     _spec("create_return_track", "track", result="{index, name}", write=True, stability="likely-complete"),
-    _spec("delete_track", "track", required=("track_index",), result="{deleted_index}", write=True, stability="likely-complete"),
+    _spec("delete_track", "track", required=("track_index",), result="{deleted_index}", write=True, stability="confirmed", notes="Validated in Ableton Live 12 locally on 2026-04-09 with create/delete cleanup."),
     _spec("duplicate_track", "track", required=("track_index",), result="{original_index}", write=True, stability="likely-complete"),
     _spec("set_track_name", "track", required=("track_index", "name"), result="{name}", write=True, stability="likely-complete"),
     _spec("set_track_color", "track", required=("track_index", "color"), result="{color}", write=True, stability="likely-complete"),
@@ -171,15 +171,15 @@ _COMMAND_SPECS = [
     _spec("set_cue_volume", "track", required=("volume",), result="{cue_volume}", write=True, stability="likely-complete"),
 
     _spec("get_clip_info", "session_clip", required=("track_index", "slot_index"), result="session clip details", stability="likely-complete"),
-    _spec("create_clip", "session_clip", required=("track_index", "slot_index"), optional=("length",), result="session clip details", write=True, stability="likely-complete", exposed=True),
-    _spec("delete_clip", "session_clip", required=("track_index", "slot_index"), result="{ok}", write=True, stability="likely-complete"),
+    _spec("create_clip", "session_clip", required=("track_index", "slot_index"), optional=("length",), result="session clip details", write=True, stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 with create/delete cleanup."),
+    _spec("delete_clip", "session_clip", required=("track_index", "slot_index"), result="{ok}", write=True, stability="confirmed", notes="Validated in Ableton Live 12 locally on 2026-04-09 with create/delete cleanup."),
     _spec("duplicate_clip", "session_clip", required=("track_index", "slot_index"), optional=("destination_slot_index",), result="{ok, destination_slot_index}", write=True, stability="partial"),
     _spec("set_clip_name", "session_clip", required=("track_index", "slot_index", "name"), result="{name}", write=True, stability="likely-complete"),
     _spec("set_clip_color", "session_clip", required=("track_index", "slot_index", "color"), result="{color}", write=True, stability="likely-complete"),
     _spec("fire_clip", "session_clip", required=("track_index", "slot_index"), result="{ok}", write=True, stability="likely-complete"),
     _spec("stop_clip", "session_clip", required=("track_index", "slot_index"), result="{ok}", write=True, stability="likely-complete"),
-    _spec("get_clip_notes", "session_clip", required=("track_index", "slot_index"), result="{notes[], count}", stability="likely-complete", exposed=True),
-    _spec("add_notes_to_clip", "session_clip", required=("track_index", "slot_index", "notes"), result="{added}", write=True, stability="likely-complete", exposed=True),
+    _spec("get_clip_notes", "session_clip", required=("track_index", "slot_index"), result="{notes[], count}", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 with note round-trip verification."),
+    _spec("add_notes_to_clip", "session_clip", required=("track_index", "slot_index", "notes"), result="{added}", write=True, stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 with note round-trip verification."),
     _spec("set_clip_notes", "session_clip", required=("track_index", "slot_index", "notes"), result="{count}", write=True, stability="likely-complete"),
     _spec("remove_notes_from_clip", "session_clip", required=("track_index", "slot_index"), optional=("from_time", "time_span", "from_pitch", "pitch_span"), result="{ok}", write=True, stability="likely-complete"),
     _spec("set_clip_loop", "session_clip", required=("track_index", "slot_index"), optional=("looping", "loop_start", "loop_end"), result="{looping, loop_start, loop_end}", write=True, stability="likely-complete"),
@@ -193,15 +193,15 @@ _COMMAND_SPECS = [
     _spec("set_clip_automation", "session_clip", required=("track_index", "slot_index", "envelope"), optional=("device_index", "parameter_index"), result="{ok, points_added}", write=True, stability="partial"),
     _spec("clear_clip_automation", "session_clip", required=("track_index", "slot_index"), optional=("device_index", "parameter_index"), result="{ok}", write=True, stability="partial"),
 
-    _spec("get_arrangement_clips", "arrangement", required=("track_index",), result="{track_index, clips[]}", stability="likely-complete", exposed=True),
+    _spec("get_arrangement_clips", "arrangement", required=("track_index",), result="{track_index, clips[]}", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09."),
     _spec("get_all_arrangement_clips", "arrangement", result="{tracks[]}", stability="likely-complete"),
-    _spec("create_arrangement_midi_clip", "arrangement", required=("track_index", "start_time"), optional=("length",), result="{start_time, end_time, length, name}", write=True, stability="likely-complete", exposed=True),
+    _spec("create_arrangement_midi_clip", "arrangement", required=("track_index", "start_time"), optional=("length",), result="{start_time, end_time, length, name}", write=True, stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 with note round-trip verification."),
     _spec("create_arrangement_audio_clip", "arrangement", required=("track_index", "file_path", "start_time"), result="{start_time, end_time, length, name, file_path}", write=True, stability="partial", notes="Corrected to Track.create_audio_clip(file_path, position)."),
     _spec("delete_arrangement_clip", "arrangement", required=("track_index",), optional=("clip_index", "start_time"), result="{ok}", write=True, stability="partial"),
     _spec("resize_arrangement_clip", "arrangement", required=("track_index", "length"), optional=("clip_index", "start_time"), result="{start_time, end_time, length}", write=True, stability="partial"),
     _spec("move_arrangement_clip", "arrangement", required=("track_index", "new_start_time"), optional=("clip_index", "start_time"), result="{start_time, end_time, length, notes_restored}", write=True, stability="partial"),
-    _spec("add_notes_to_arrangement_clip", "arrangement", required=("track_index", "notes"), optional=("clip_index", "start_time"), result="{added}", write=True, stability="likely-complete", exposed=True),
-    _spec("get_arrangement_clip_notes", "arrangement", required=("track_index",), optional=("clip_index", "start_time"), result="{notes[], count}", stability="likely-complete", exposed=True),
+    _spec("add_notes_to_arrangement_clip", "arrangement", required=("track_index", "notes"), optional=("clip_index", "start_time"), result="{added}", write=True, stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 with note round-trip verification."),
+    _spec("get_arrangement_clip_notes", "arrangement", required=("track_index",), optional=("clip_index", "start_time"), result="{notes[], count}", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 with note round-trip verification."),
     _spec("duplicate_to_arrangement", "arrangement", required=("track_index", "slot_index"), optional=("start_time",), result="{ok, start_time, source_track_index, source_slot_index}", write=True, stability="likely-complete"),
 
     _spec("get_all_scenes", "scene", result="{scenes[]}", stability="likely-complete"),

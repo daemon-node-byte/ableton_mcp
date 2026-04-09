@@ -15,7 +15,7 @@ It does **not** guarantee that every implementation is complete or correct.
 Recommended interpretation:
 - use this as the public capability map
 - preserve it during refactors unless there is a deliberate migration decision
-- treat implementation status as mostly **unverified** unless audited
+- treat implementation status as provisional unless marked `confirmed` from direct Live validation
 - use `mcp_server/command_specs.py` for the current stability label and MCP exposure state
 
 ## Conventions
@@ -26,10 +26,29 @@ Commands fall into two broad groups:
 - **write-style** commands, which are generally wrapped in `_schedule_and_wait(...)` to execute safely on Ableton's main thread
 
 ### Canonical stability labels now used in code
+- **confirmed**: directly validated against a real Ableton Live 12 session
 - **likely-complete**: repo review plus official API docs suggest the implementation is directionally sound
 - **partial**: command exists and is useful, but known edge cases or contract issues remain
 - **stub**: intentional placeholder or best-effort fallback
 - **unverified**: present in the surface but not trusted yet
+
+### Runtime validation snapshot
+Validated locally in Ableton Live 12 on 2026-04-09:
+- `health_check`
+- `get_session_info`
+- `get_current_song_time`
+- `get_all_track_names`
+- `get_track_info`
+- `create_midi_track`
+- `delete_track`
+- `create_clip`
+- `delete_clip`
+- `get_clip_notes`
+- `add_notes_to_clip`
+- `get_arrangement_clips`
+- `create_arrangement_midi_clip`
+- `add_notes_to_arrangement_clip`
+- `get_arrangement_clip_notes`
 
 ### MCP exposure in this pass
 - First-class MCP tools:
@@ -51,7 +70,7 @@ Commands fall into two broad groups:
 
 | Command | Purpose | Status |
 |---|---|---|
-| `health_check` | Basic connectivity / session sanity check | plausible |
+| `health_check` | Basic connectivity / session sanity check | confirmed |
 
 ---
 
@@ -59,8 +78,8 @@ Commands fall into two broad groups:
 
 | Command | Purpose | Status |
 |---|---|---|
-| `get_session_info` | Return core set/session info | plausible |
-| `get_current_song_time` | Read current arrangement time | plausible |
+| `get_session_info` | Return core set/session info | confirmed |
+| `get_current_song_time` | Read current arrangement time | confirmed |
 | `set_current_song_time` | Set current arrangement time | plausible |
 | `set_tempo` | Set project tempo | plausible |
 | `set_time_signature` | Set time signature | plausible |
@@ -106,12 +125,12 @@ Commands fall into two broad groups:
 
 | Command | Purpose | Status |
 |---|---|---|
-| `get_track_info` | Return detailed info for one track | plausible |
-| `get_all_track_names` | List track names | plausible |
-| `create_midi_track` | Create MIDI track | plausible |
+| `get_track_info` | Return detailed info for one track | confirmed |
+| `get_all_track_names` | List track names | confirmed |
+| `create_midi_track` | Create MIDI track | confirmed |
 | `create_audio_track` | Create audio track | plausible |
 | `create_return_track` | Create return track | plausible |
-| `delete_track` | Delete track | plausible |
+| `delete_track` | Delete track | confirmed |
 | `duplicate_track` | Duplicate track | plausible |
 | `set_track_name` | Rename track | plausible |
 | `set_track_color` | Set track color | plausible |
@@ -161,15 +180,15 @@ Commands fall into two broad groups:
 | Command | Purpose | Status |
 |---|---|---|
 | `get_clip_info` | Inspect a session clip | plausible |
-| `create_clip` | Create clip in session slot | plausible |
-| `delete_clip` | Delete session clip | plausible |
+| `create_clip` | Create clip in session slot | confirmed |
+| `delete_clip` | Delete session clip | confirmed |
 | `duplicate_clip` | Duplicate session clip slot | needs audit |
 | `set_clip_name` | Rename clip | plausible |
 | `set_clip_color` | Set clip color | plausible |
 | `fire_clip` | Launch clip | plausible |
 | `stop_clip` | Stop clip/slot | plausible |
-| `get_clip_notes` | Read MIDI notes | plausible |
-| `add_notes_to_clip` | Add MIDI notes | plausible |
+| `get_clip_notes` | Read MIDI notes | confirmed |
+| `add_notes_to_clip` | Add MIDI notes | confirmed |
 | `set_clip_notes` | Replace MIDI notes | plausible |
 | `remove_notes_from_clip` | Remove MIDI notes in range | plausible |
 | `set_clip_loop` | Set looping and loop range | plausible |
@@ -189,15 +208,15 @@ Commands fall into two broad groups:
 
 | Command | Purpose | Status |
 |---|---|---|
-| `get_arrangement_clips` | List arrangement clips for one track | plausible |
+| `get_arrangement_clips` | List arrangement clips for one track | confirmed |
 | `get_all_arrangement_clips` | List arrangement clips across tracks | plausible |
-| `create_arrangement_midi_clip` | Create MIDI clip in arrangement | plausible |
+| `create_arrangement_midi_clip` | Create MIDI clip in arrangement | confirmed |
 | `create_arrangement_audio_clip` | Create audio clip in arrangement | high risk |
 | `delete_arrangement_clip` | Delete arrangement clip | needs audit |
 | `resize_arrangement_clip` | Resize arrangement clip | needs audit |
 | `move_arrangement_clip` | Move arrangement clip | needs audit |
-| `add_notes_to_arrangement_clip` | Add MIDI notes to arrangement clip | plausible |
-| `get_arrangement_clip_notes` | Read notes from arrangement clip | plausible |
+| `add_notes_to_arrangement_clip` | Add MIDI notes to arrangement clip | confirmed |
+| `get_arrangement_clip_notes` | Read notes from arrangement clip | confirmed |
 | `duplicate_to_arrangement` | Copy session clip to arrangement | needs audit |
 
 ### Notes

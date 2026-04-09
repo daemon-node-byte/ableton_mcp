@@ -197,7 +197,33 @@ There is also a development escape hatch:
 
 That tool can call any cataloged command from [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py), but some commands are still marked `partial` or `unverified`.
 
-## 8. Common problems
+## 8. Verified locally
+
+The following commands have been verified against a real local Ableton Live 12 session on 2026-04-09:
+
+- `health_check`
+- `get_session_info`
+- `get_current_song_time`
+- `get_all_track_names`
+- `get_track_info`
+- `create_midi_track`
+- `delete_track`
+- `create_clip`
+- `delete_clip`
+- `get_clip_notes`
+- `add_notes_to_clip`
+- `get_arrangement_clips`
+- `create_arrangement_midi_clip`
+- `add_notes_to_arrangement_clip`
+- `get_arrangement_clip_notes`
+
+The session and arrangement note flows were validated as full round trips:
+- create temporary clip
+- add 3 MIDI notes
+- read the same 3 notes back
+- delete the temporary clip
+
+## 9. Common problems
 
 ### The MCP server starts but commands fail to connect
 
@@ -221,11 +247,12 @@ Use:
 uv run --python 3.11 ableton-mcp
 ```
 
-## 9. Current honesty note
+## 10. Current honesty note
 
 This repo is ready to run locally and in Docker, but it is still in an audit-heavy stage.
 The server is intentionally honest about command maturity:
 
+- some commands are `confirmed`
 - some commands are `likely-complete`
 - some are `partial`
 - some remain `unverified`

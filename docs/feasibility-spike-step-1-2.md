@@ -13,6 +13,7 @@ Important updates:
 - `get_arrangement_length` now uses `Song.song_length` with clip-end fallback
 - `duplicate_to_arrangement` now uses `Track.duplicate_clip_to_arrangement(...)`
 - take-lane handling now assumes `Track.create_take_lane()` and `TakeLane.create_midi_clip(start_time, length)` where available
+- the arrangement MIDI note round trip is now Live-validated for `get_arrangement_clips`, `create_arrangement_midi_clip`, `add_notes_to_arrangement_clip`, and `get_arrangement_clip_notes`
 
 What still requires Live-backed validation has not changed:
 - actual undo behavior
@@ -129,10 +130,23 @@ Step 1 is successful if all of the following are true in Live 12:
 - Some operations may succeed only when the target view or selection state is a certain way.
 - Timing fields may use beats, bars, or internal clip offsets inconsistently if not normalized carefully.
 
-### Recommendation after code review
+### Validation update
 
-Step 1 should now be treated as a runtime verification task, not a design exploration task.
-The code surface already exists. The next move is to test it against a controlled Ableton Live 12 session.
+Step 1 has now passed its basic runtime validation loop in a real Ableton Live 12 session:
+
+1. `create_arrangement_midi_clip` created a temporary arrangement MIDI clip on a MIDI track.
+2. `add_notes_to_arrangement_clip` inserted a 3-note pattern.
+3. `get_arrangement_clip_notes` read the same 3 notes back with the expected pitches, times, durations, and velocities.
+4. the temporary clip was removed with cleanup after the test.
+
+### Remaining Step 1 work
+
+The remaining Step 1 questions are now narrower:
+- undo behavior
+- resize semantics
+- move semantics
+- duplicate-to-arrangement behavior
+- edge cases around overlap and invalid targets
 
 ## Step 2. Arrangement audio clip insertion
 

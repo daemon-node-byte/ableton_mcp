@@ -4,34 +4,32 @@ Date: 2026-04-09
 Project: AbletonMCP_v2
 Purpose: prioritize the next Live 12 runtime validation loop now that the repo has a real MCP server, a command registry, and corrected high-risk API contracts
 
-## Priority order
+## Completed on 2026-04-09
 
-1. Arrangement MIDI clip flow
-2. Arrangement audio clip flow with real file paths
-3. Native device insertion via `Track.insert_device(...)`
-4. Browser URI loading
-5. Take lanes
-6. Plugin-window behavior
-
-## 1. Arrangement MIDI clip flow
-
-Validate:
-- `create_arrangement_midi_clip`
+Confirmed locally in Ableton Live 12:
+- `health_check`
+- `get_session_info`
+- `get_current_song_time`
+- `get_all_track_names`
+- `get_track_info`
+- `create_midi_track` plus `delete_track`
+- `create_clip` plus `delete_clip`
+- `add_notes_to_clip` plus `get_clip_notes`
 - `get_arrangement_clips`
+- `create_arrangement_midi_clip`
 - `add_notes_to_arrangement_clip`
 - `get_arrangement_clip_notes`
-- `resize_arrangement_clip`
-- `move_arrangement_clip`
-- `duplicate_to_arrangement`
 
-Record:
-- request payload
-- response payload
-- visible result in Live
-- undo behavior
-- any side effects on selection, playback, or Back to Arrangement
+## Priority order
 
-## 2. Arrangement audio clip flow
+1. Arrangement audio clip flow with real file paths
+2. Native device insertion via `Track.insert_device(...)`
+3. Browser URI loading
+4. Take lanes
+5. Plugin-window behavior
+6. Remaining arrangement MIDI edge cases: `resize_arrangement_clip`, `move_arrangement_clip`, `duplicate_to_arrangement`, and undo behavior
+
+## 1. Arrangement audio clip flow
 
 Validate:
 - `create_arrangement_audio_clip` with absolute file paths
@@ -46,7 +44,7 @@ Record:
 - marker defaults
 - failure behavior for missing files and wrong track types
 
-## 3. Native device insertion
+## 2. Native device insertion
 
 Validate:
 - `load_instrument_or_effect` with `device_name`
@@ -57,7 +55,7 @@ Record:
 - failure behavior for invalid insert positions
 - Live 12.3+ requirement confirmation
 
-## 4. Browser URI loading
+## 3. Browser URI loading
 
 Validate:
 - `load_instrument_or_effect` with `uri`
@@ -72,7 +70,7 @@ Record:
 - which content classes are loadable
 - any platform-specific issues
 
-## 5. Take lanes
+## 4. Take lanes
 
 Validate:
 - `create_take_lane`
@@ -86,7 +84,7 @@ Record:
 - whether take-lane creation has side effects
 - how take-lane clip enumeration behaves after comping and recording
 
-## 6. Plugin-window behavior
+## 5. Plugin-window behavior
 
 Validate:
 - `show_plugin_window`
@@ -96,3 +94,16 @@ Record:
 - whether these commands affect only device-chain collapse
 - whether any actual plugin editor visibility changes occur
 - whether command names should be narrowed or aliased in a future pass
+
+## 6. Remaining arrangement MIDI edge cases
+
+Validate:
+- `resize_arrangement_clip`
+- `move_arrangement_clip`
+- `duplicate_to_arrangement`
+
+Record:
+- whether note data survives each operation
+- whether the recreated clip path for `move_arrangement_clip` behaves sanely
+- undo behavior
+- any unexpected selection or playback side effects
