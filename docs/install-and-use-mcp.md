@@ -26,7 +26,7 @@ Copy the repo folder [AbletonMCP_Remote_Script](/Users/joshmclain/code/AbletonMC
 
 Typical paths:
 
-- macOS: `~/Music/Ableton/User Library/Remote Scripts/AbletonMCP`
+- macOS: `/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts`
 - Windows: `C:\Users\<you>\Documents\Ableton\User Library\Remote Scripts\AbletonMCP`
 
 After copying it:

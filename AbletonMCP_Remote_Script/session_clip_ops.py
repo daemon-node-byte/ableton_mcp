@@ -63,19 +63,19 @@ class SessionClipOpsMixin(object):
         clip = self._get_clip(params["track_index"], params["slot_index"])
         if not clip.is_midi_clip:
             raise ValueError("Clip is not a MIDI clip")
-        note_objects = self._build_midi_notes(params.get("notes", []))
-        clip.add_new_notes(note_objects)
-        return {"added": len(note_objects)}
+        note_payload = self._build_midi_notes(params.get("notes", []))
+        clip.add_new_notes(note_payload)
+        return {"added": len(note_payload["notes"])}
 
     def _set_clip_notes(self, params):
         clip = self._get_clip(params["track_index"], params["slot_index"])
         if not clip.is_midi_clip:
             raise ValueError("Clip is not a MIDI clip")
         clip.remove_notes_extended(0, clip.length, 0, 128)
-        note_objects = self._build_midi_notes(params.get("notes", []))
-        if note_objects:
-            clip.add_new_notes(note_objects)
-        return {"count": len(note_objects)}
+        note_payload = self._build_midi_notes(params.get("notes", []))
+        if note_payload["notes"]:
+            clip.add_new_notes(note_payload)
+        return {"count": len(note_payload["notes"])}
 
     def _remove_notes_from_clip(self, params):
         clip = self._get_clip(params["track_index"], params["slot_index"])

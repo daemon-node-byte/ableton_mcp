@@ -119,29 +119,38 @@ class CoreOpsMixin(object):
 
     def _serialize_notes(self, raw_notes):
         notes = []
+        if isinstance(raw_notes, dict):
+            raw_notes = raw_notes.get("notes", [])
         for note in raw_notes:
-            notes.append({
-                "pitch": note.pitch,
-                "time": note.start_time,
-                "duration": note.duration,
-                "velocity": note.velocity,
-                "mute": note.mute,
-            })
+            if isinstance(note, dict):
+                notes.append({
+                    "pitch": note["pitch"],
+                    "time": note.get("time", note.get("start_time", 0.0)),
+                    "duration": note["duration"],
+                    "velocity": note.get("velocity", 100),
+                    "mute": note.get("mute", False),
+                })
+            else:
+                notes.append({
+                    "pitch": note.pitch,
+                    "time": note.start_time,
+                    "duration": note.duration,
+                    "velocity": note.velocity,
+                    "mute": note.mute,
+                })
         return notes
 
     def _build_midi_note(self, note_data):
-        if Live is None:
-            raise RuntimeError("Live API is unavailable")
-        return Live.Clip.MidiNote(
-            pitch=int(note_data["pitch"]),
-            start_time=float(note_data.get("time", note_data.get("start_time", 0.0))),
-            duration=float(note_data.get("duration", 0.25)),
-            velocity=int(note_data.get("velocity", 100)),
-            mute=bool(note_data.get("mute", False)),
-        )
+        return {
+            "pitch": int(note_data["pitch"]),
+            "start_time": float(note_data.get("time", note_data.get("start_time", 0.0))),
+            "duration": float(note_data.get("duration", 0.25)),
+            "velocity": float(note_data.get("velocity", 100)),
+            "mute": bool(note_data.get("mute", False)),
+        }
 
     def _build_midi_notes(self, notes_data):
-        return tuple(self._build_midi_note(note) for note in notes_data)
+        return {"notes": [self._build_midi_note(note) for note in notes_data]}
 
     def _routing_display_name(self, routing):
         if routing is None:

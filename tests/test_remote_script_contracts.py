@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import unittest
 
 from AbletonMCP_Remote_Script.arrangement_ops import ArrangementOpsMixin
+from AbletonMCP_Remote_Script.core import CoreOpsMixin
 from AbletonMCP_Remote_Script.song_ops import SongOpsMixin
 from AbletonMCP_Remote_Script.take_lane_ops import TakeLaneOpsMixin
 
@@ -67,6 +68,10 @@ class _SongHarness(SongOpsMixin):
         return _FakeApplication()
 
 
+class _CoreHarness(CoreOpsMixin):
+    pass
+
+
 class RemoteScriptContractTests(unittest.TestCase):
     def test_create_arrangement_audio_clip_uses_file_path_and_start_time(self):
         track = _FakeAudioTrack()
@@ -90,3 +95,39 @@ class RemoteScriptContractTests(unittest.TestCase):
         harness = _SongHarness()
         result = harness._get_cpu_load()
         self.assertEqual({"cpu_load": 13.37}, result)
+
+    def test_build_midi_note_returns_live_note_dict_shape(self):
+        harness = _CoreHarness()
+        note = harness._build_midi_note(
+            {"pitch": 60, "time": 1.5, "duration": 0.25, "velocity": 99, "mute": True}
+        )
+        self.assertEqual(
+            {
+                "pitch": 60,
+                "start_time": 1.5,
+                "duration": 0.25,
+                "velocity": 99.0,
+                "mute": True,
+            },
+            note,
+        )
+
+    def test_build_midi_notes_wraps_notes_payload(self):
+        harness = _CoreHarness()
+        payload = harness._build_midi_notes(
+            [{"pitch": 60, "time": 0.0, "duration": 0.5, "velocity": 100, "mute": False}]
+        )
+        self.assertEqual(
+            {
+                "notes": [
+                    {
+                        "pitch": 60,
+                        "start_time": 0.0,
+                        "duration": 0.5,
+                        "velocity": 100.0,
+                        "mute": False,
+                    }
+                ]
+            },
+            payload,
+        )

@@ -4,7 +4,7 @@
 #
 # Installation:
 #   Copy this entire folder to:
-#   macOS: ~/Music/Ableton/User Library/Remote Scripts/AbletonMCP/
+#   macOS: /Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts
 #   Windows: \Users\[username]\Documents\Ableton\User Library\Remote Scripts\AbletonMCP\
 #   Then add AbletonMCP as a Control Surface in Preferences > Link/MIDI.
 
