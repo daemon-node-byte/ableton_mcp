@@ -25,12 +25,14 @@ AbletonMCP is a Python-first MCP server for Ableton Live 12 built around a custo
 
 ## Current Status
 
-Validated locally in Ableton Live 12 on `2026-04-09`:
+Validated locally in Ableton Live 12 on `2026-04-10`:
 
 - core connectivity and session introspection
 - Session View clip and MIDI note round trips
 - Arrangement View MIDI/audio clip creation, edit, delete, and duplication flows
 - browser discovery plus built-in instrument, drum-kit, MIDI-effect, and audio-effect loading
+- first-class MCP tools for system-owned Instrument Rack and Audio Effect Rack creation, chain/device insertion, recursive structure inspection, and nested parameter tuning
+- project-root Memory Bank persistence for saved Live Sets and system-owned rack metadata
 - first-class MCP tools for rack, chain, and drum-rack inspection/mutation
 - LOM-backed drum-pad remap via `DrumChain.in_note` for Live 12.3+
 
@@ -67,9 +69,9 @@ First-class MCP tools currently cover:
 - basic track inspection and creation
 - Session View clip and note workflows
 - Arrangement View clip creation and editing
-- device inspection and named parameter access
+- device inspection, named parameter access, and nested rack-device path tuning
 - browser discovery and validated built-in loading
-- rack, chain, and drum-rack inspection/mutation
+- system-owned rack authoring, blueprint application, Memory Bank persistence, and rack/chain/drum-rack inspection/mutation
 
 Anything not promoted yet is still reachable through `ableton_raw_command(...)`.
 

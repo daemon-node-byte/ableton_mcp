@@ -25,6 +25,9 @@ Direct Live validation currently covers:
 - Arrangement View clip creation, edit, delete, import, and duplication
 - browser discovery and validated built-in loading
 - built-in MIDI-effect and audio-effect loading
+- system-owned Instrument Rack and Audio Effect Rack creation, chain insertion, nested device insertion, and recursive structure readback
+- nested rack-device parameter read/write via track-relative LOM-style paths
+- project-root Memory Bank persistence for system-owned racks in saved Live Sets
 - rack, chain, and drum-rack inspection/mutation
 
 For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md).
@@ -59,7 +62,7 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 | `re_enable_automation` | Re-enable automation | plausible |
 | `set_arrangement_loop` | Set arrangement loop start/length/on-off | plausible |
 | `get_cpu_load` | Return CPU-ish metric | needs audit |
-| `get_session_path` | Return session/project path | high risk |
+| `get_session_path` | Return session/project path | confirmed |
 | `get_locators` | List locators / cue points | plausible |
 | `create_locator` | Create locator / cue | needs audit |
 | `delete_locator` | Delete locator / cue | needs audit |
@@ -79,6 +82,7 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 ### Notes
 
 - `get_cpu_load` and `get_session_path` were corrected to use official Live API properties.
+- `get_session_path` is now directly validated against a saved `.als` and is the persistence anchor for the project Memory Bank workflow.
 - locator creation/deletion may still need closer runtime verification.
 
 ## 3. Tracks
@@ -204,6 +208,9 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 | `set_device_parameter` | Set parameter by index | plausible |
 | `set_device_parameter_by_name` | Set parameter by name | plausible |
 | `get_device_parameter_by_name` | Read parameter by name | plausible |
+| `get_device_parameters_at_path` | List parameters for a nested device in a rack tree | confirmed |
+| `set_device_parameter_at_path` | Set nested device parameter by index using a rack path | confirmed |
+| `set_device_parameter_by_name_at_path` | Set nested device parameter by name using a rack path | confirmed |
 | `toggle_device` | Toggle device active state | needs audit |
 | `set_device_enabled` | Set device enabled state | plausible |
 | `delete_device` | Delete device from track | plausible |
@@ -222,24 +229,34 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 - `load_instrument_or_effect` is validated in Live for native built-in device insertion plus discovered built-in instrument, MIDI-effect, and audio-effect URIs.
 - third-party plugin URIs remain backlog work.
 - `target_index` only applies to native insertion, not browser URI loading.
+- the path-based device commands use track-relative LOM-style paths such as `devices 0 chains 1 devices 2`.
+- EQ Eight shorthand names such as `Gain A`, `Frequency A`, and `Q A` are normalized to the validated Live parameter names during nested rack tuning.
 
 ## 9. Racks and chains
 
 | Command | Purpose | Status |
 |---|---|---|
+| `create_rack` | Create a native Instrument Rack or Audio Effect Rack | confirmed |
+| `insert_rack_chain` | Insert a chain into a target rack | confirmed |
+| `insert_device_in_chain` | Insert a built-in Live device into a rack chain | confirmed |
 | `get_rack_chains` | List rack chains and chain state | confirmed |
 | `get_rack_macros` | List rack macros | confirmed |
 | `set_rack_macro` | Set rack macro value | confirmed |
+| `get_rack_structure` | Recursively inspect a rack tree with nested paths | confirmed |
 | `get_chain_devices` | List devices in a chain | confirmed |
 | `set_chain_mute` | Mute chain | confirmed |
 | `set_chain_solo` | Solo chain | confirmed |
 | `set_chain_volume` | Set chain volume | confirmed |
+| `apply_rack_blueprint` | Create and tune a deterministic system-owned rack tree | confirmed |
 
 ### Notes
 
 - these commands are now promoted as first-class MCP tools and have repo-level contract coverage.
 - `get_rack_macros` returns stable macro indices intended for `set_rack_macro`.
-- generic `Instrument Rack` and `Audio Effect Rack` device entries load as empty shells in the current Live library, so populated chain validation was proven on a loaded Drum Rack.
+- system-owned Instrument Rack and Audio Effect Rack authoring is now directly validated in Live 12.3+ using native rack insertion plus chain/device creation.
+- `get_rack_structure` returns track-relative LOM-style paths for racks, chains, devices, and return chains so later tuning calls can reuse them directly.
+- `apply_rack_blueprint` supports deterministic built-in device graphs and rejects native macro-mapping directives with a stable unsupported error.
+- native macro value read/write is confirmed only for already-exposed rack macros. Native macro-to-parameter authoring and macro-to-macro authoring are still out of scope.
 
 ## 10. Drum rack
 
@@ -258,7 +275,23 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 - `get_drum_rack_pads` includes chain-backed note metadata so Live-side validators can read back remaps on the destination pad.
 - `set_drum_rack_pad_mute` now reflects effective mute state and falls back to chain mute when pad-level mute does not stick in Live.
 
-## 11. Browser
+## 11. Memory Bank
+
+| Command | Purpose | Status |
+|---|---|---|
+| `read_memory_bank` | Read a project Memory Bank file | confirmed |
+| `write_memory_bank` | Write a project Memory Bank file | confirmed |
+| `append_rack_entry` | Append an additional rack note or record | confirmed |
+| `get_system_owned_racks` | List tracked system-owned racks for the current project | confirmed |
+| `refresh_rack_memory_entry` | Re-snapshot a tracked rack into the Memory Bank | confirmed |
+
+### Notes
+
+- the Memory Bank lives under `.ableton-mcp/memory` at the saved Ableton project root.
+- Memory Bank writes require a saved Live Set because the project root is derived from `Song.file_path`.
+- system-owned rack entries store rack identity, blueprint provenance, recursive structure, current macro snapshot, and explicit notes when native macro mappings are unsupported or unknown.
+
+## 12. Browser
 
 | Command | Purpose | Status |
 |---|---|---|
@@ -274,7 +307,7 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 - `load_drum_kit` is validated for discovered built-in drum-kit preset URIs and rejects the generic `Drum Rack` device entry.
 - third-party plugin URIs and broader effect-loading behavior remain backlog work.
 
-## 12. Take lanes (Live 12+)
+## 13. Take lanes (Live 12+)
 
 | Command | Purpose | Status |
 |---|---|---|
@@ -290,7 +323,7 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 - the implementation now uses `Track.create_take_lane()` when available.
 - this domain should still be treated as experimental until it gets direct runtime coverage.
 
-## 13. View / selection / UI focus
+## 14. View / selection / UI focus
 
 | Command | Purpose | Status |
 |---|---|---|
