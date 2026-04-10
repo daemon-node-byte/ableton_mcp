@@ -93,3 +93,80 @@ class ServerRegistrationTests(unittest.TestCase):
             {"track_index": 2, "rack_uri": "query:Drums#FileId_5422"},
         )
         self.assertEqual({"ok": True}, result)
+
+    def test_rack_and_drum_wrappers_forward_expected_params(self):
+        cases = (
+            (
+                "get_rack_chains",
+                lambda: ableton_server.get_rack_chains(2, 5),
+                "get_rack_chains",
+                {"track_index": 2, "device_index": 5},
+            ),
+            (
+                "get_rack_macros",
+                lambda: ableton_server.get_rack_macros(2, 5),
+                "get_rack_macros",
+                {"track_index": 2, "device_index": 5},
+            ),
+            (
+                "set_rack_macro",
+                lambda: ableton_server.set_rack_macro(2, 5, 1, 0.75),
+                "set_rack_macro",
+                {"track_index": 2, "device_index": 5, "macro_index": 1, "value": 0.75},
+            ),
+            (
+                "get_chain_devices",
+                lambda: ableton_server.get_chain_devices(2, 5, 0),
+                "get_chain_devices",
+                {"track_index": 2, "device_index": 5, "chain_index": 0},
+            ),
+            (
+                "set_chain_mute",
+                lambda: ableton_server.set_chain_mute(2, 5, 0, True),
+                "set_chain_mute",
+                {"track_index": 2, "device_index": 5, "chain_index": 0, "mute": True},
+            ),
+            (
+                "set_chain_solo",
+                lambda: ableton_server.set_chain_solo(2, 5, 0, True),
+                "set_chain_solo",
+                {"track_index": 2, "device_index": 5, "chain_index": 0, "solo": True},
+            ),
+            (
+                "set_chain_volume",
+                lambda: ableton_server.set_chain_volume(2, 5, 0, 0.42),
+                "set_chain_volume",
+                {"track_index": 2, "device_index": 5, "chain_index": 0, "volume": 0.42},
+            ),
+            (
+                "get_drum_rack_pads",
+                lambda: ableton_server.get_drum_rack_pads(2, 5),
+                "get_drum_rack_pads",
+                {"track_index": 2, "device_index": 5},
+            ),
+            (
+                "set_drum_rack_pad_note",
+                lambda: ableton_server.set_drum_rack_pad_note(2, 5, 36, 48),
+                "set_drum_rack_pad_note",
+                {"track_index": 2, "device_index": 5, "note": 36, "new_note": 48},
+            ),
+            (
+                "set_drum_rack_pad_mute",
+                lambda: ableton_server.set_drum_rack_pad_mute(2, 5, 36, True),
+                "set_drum_rack_pad_mute",
+                {"track_index": 2, "device_index": 5, "note": 36, "mute": True},
+            ),
+            (
+                "set_drum_rack_pad_solo",
+                lambda: ableton_server.set_drum_rack_pad_solo(2, 5, 36, True),
+                "set_drum_rack_pad_solo",
+                {"track_index": 2, "device_index": 5, "note": 36, "solo": True},
+            ),
+        )
+
+        for label, caller, command_name, expected_params in cases:
+            with self.subTest(wrapper=label):
+                with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
+                    result = caller()
+                invoke_mock.assert_called_once_with(command_name, expected_params)
+                self.assertEqual({"ok": True}, result)

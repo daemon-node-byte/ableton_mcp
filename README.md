@@ -1,6 +1,6 @@
 # AbletonMCP
 
-[![Version v0.2-beta.0](https://img.shields.io/badge/version-v0.2--beta.0-blue)](README.md)
+[![Version v0.3-beta.0](https://img.shields.io/badge/version-v0.3--beta.0-blue)](README.md)
 [![Ableton Live 12](https://img.shields.io/badge/Ableton%20Live-12-000000)](docs/install-and-use-mcp.md)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](docs/install-and-use-mcp.md)
 [![MCP stdio](https://img.shields.io/badge/MCP-stdio-2E8B57)](docs/install-and-use-mcp.md)
@@ -30,7 +30,9 @@ Validated locally in Ableton Live 12 on `2026-04-09`:
 - core connectivity and session introspection
 - Session View clip and MIDI note round trips
 - Arrangement View MIDI/audio clip creation, edit, delete, and duplication flows
-- browser discovery plus built-in instrument and drum-kit loading
+- browser discovery plus built-in instrument, drum-kit, MIDI-effect, and audio-effect loading
+- first-class MCP tools for rack, chain, and drum-rack inspection/mutation
+- LOM-backed drum-pad remap via `DrumChain.in_note` for Live 12.3+
 
 Still in the validation backlog:
 
@@ -67,6 +69,7 @@ First-class MCP tools currently cover:
 - Arrangement View clip creation and editing
 - device inspection and named parameter access
 - browser discovery and validated built-in loading
+- rack, chain, and drum-rack inspection/mutation
 
 Anything not promoted yet is still reachable through `ableton_raw_command(...)`.
 

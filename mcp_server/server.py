@@ -259,6 +259,105 @@ def load_drum_kit(track_index: int, rack_uri: str):
     return _invoke("load_drum_kit", {"track_index": track_index, "rack_uri": rack_uri})
 
 
+@mcp.tool(description=get_command_spec("get_rack_chains").tool_description)
+def get_rack_chains(track_index: int, device_index: int):
+    return _invoke("get_rack_chains", {"track_index": track_index, "device_index": device_index})
+
+
+@mcp.tool(description=get_command_spec("get_rack_macros").tool_description)
+def get_rack_macros(track_index: int, device_index: int):
+    return _invoke("get_rack_macros", {"track_index": track_index, "device_index": device_index})
+
+
+@mcp.tool(description=get_command_spec("set_rack_macro").tool_description)
+def set_rack_macro(track_index: int, device_index: int, macro_index: int, value: float):
+    return _invoke(
+        "set_rack_macro",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "macro_index": macro_index,
+            "value": value,
+        },
+    )
+
+
+@mcp.tool(description=get_command_spec("get_chain_devices").tool_description)
+def get_chain_devices(track_index: int, device_index: int, chain_index: int):
+    return _invoke(
+        "get_chain_devices",
+        {"track_index": track_index, "device_index": device_index, "chain_index": chain_index},
+    )
+
+
+@mcp.tool(description=get_command_spec("set_chain_mute").tool_description)
+def set_chain_mute(track_index: int, device_index: int, chain_index: int, mute: bool):
+    return _invoke(
+        "set_chain_mute",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "chain_index": chain_index,
+            "mute": mute,
+        },
+    )
+
+
+@mcp.tool(description=get_command_spec("set_chain_solo").tool_description)
+def set_chain_solo(track_index: int, device_index: int, chain_index: int, solo: bool):
+    return _invoke(
+        "set_chain_solo",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "chain_index": chain_index,
+            "solo": solo,
+        },
+    )
+
+
+@mcp.tool(description=get_command_spec("set_chain_volume").tool_description)
+def set_chain_volume(track_index: int, device_index: int, chain_index: int, volume: float):
+    return _invoke(
+        "set_chain_volume",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "chain_index": chain_index,
+            "volume": volume,
+        },
+    )
+
+
+@mcp.tool(description=get_command_spec("get_drum_rack_pads").tool_description)
+def get_drum_rack_pads(track_index: int, device_index: int):
+    return _invoke("get_drum_rack_pads", {"track_index": track_index, "device_index": device_index})
+
+
+@mcp.tool(description=get_command_spec("set_drum_rack_pad_note").tool_description)
+def set_drum_rack_pad_note(track_index: int, device_index: int, note: int, new_note: int):
+    return _invoke(
+        "set_drum_rack_pad_note",
+        {"track_index": track_index, "device_index": device_index, "note": note, "new_note": new_note},
+    )
+
+
+@mcp.tool(description=get_command_spec("set_drum_rack_pad_mute").tool_description)
+def set_drum_rack_pad_mute(track_index: int, device_index: int, note: int, mute: bool):
+    return _invoke(
+        "set_drum_rack_pad_mute",
+        {"track_index": track_index, "device_index": device_index, "note": note, "mute": mute},
+    )
+
+
+@mcp.tool(description=get_command_spec("set_drum_rack_pad_solo").tool_description)
+def set_drum_rack_pad_solo(track_index: int, device_index: int, note: int, solo: bool):
+    return _invoke(
+        "set_drum_rack_pad_solo",
+        {"track_index": track_index, "device_index": device_index, "note": note, "solo": solo},
+    )
+
+
 @mcp.tool(description=get_command_spec("get_track_devices").tool_description)
 def get_track_devices(track_index: int):
     return _invoke("get_track_devices", {"track_index": track_index})
