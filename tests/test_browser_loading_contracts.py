@@ -21,12 +21,14 @@ class _FakeParameter(object):
 
 
 class _FakeDevice(object):
-    def __init__(self, name, class_name="InstrumentDevice"):
+    def __init__(self, name, class_name="InstrumentDevice", can_have_chains=False, can_have_drum_pads=False):
         self.name = name
         self.class_name = class_name
         self.type = 1
         self.is_active = True
         self.parameters = [_FakeParameter()]
+        self.can_have_chains = can_have_chains
+        self.can_have_drum_pads = can_have_drum_pads
 
 
 class _FakeTrack(object):
@@ -166,6 +168,14 @@ class BrowserDeviceHarness(BrowserOpsMixin, DeviceOpsMixin, CoreOpsMixin):
 
 
 class BrowserLoadingContractTests(unittest.TestCase):
+    def test_get_track_devices_marks_group_devices_as_racks(self):
+        harness = BrowserDeviceHarness()
+        harness._track.devices.append(
+            _FakeDevice("Instrument Rack", class_name="InstrumentGroupDevice", can_have_chains=True)
+        )
+        result = harness._get_track_devices({"track_index": 0})
+        self.assertTrue(result["devices"][0]["is_rack"])
+
     def test_get_browser_tree_all_includes_available_categories(self):
         harness = BrowserDeviceHarness()
         result = harness._get_browser_tree({"category_type": "all"})
@@ -222,6 +232,20 @@ class BrowserLoadingContractTests(unittest.TestCase):
         self.assertEqual("query:Synths#Operator", result["uri"])
         self.assertEqual(1, result["device_count_after"])
         self.assertEqual("Operator", result["loaded_device_name"])
+
+    def test_load_instrument_or_effect_supports_built_in_audio_effect_uris(self):
+        harness = BrowserDeviceHarness()
+        result = harness._load_instrument_or_effect({"track_index": 0, "uri": "query:AudioFx#Amp"})
+        self.assertEqual("browser_uri_load", result["mode"])
+        self.assertEqual("query:AudioFx#Amp", result["uri"])
+        self.assertEqual("Amp", result["loaded_device_name"])
+
+    def test_load_instrument_or_effect_supports_built_in_midi_effect_uris(self):
+        harness = BrowserDeviceHarness()
+        result = harness._load_instrument_or_effect({"track_index": 0, "uri": "query:MidiFx#Arpeggiator"})
+        self.assertEqual("browser_uri_load", result["mode"])
+        self.assertEqual("query:MidiFx#Arpeggiator", result["uri"])
+        self.assertEqual("Arpeggiator", result["loaded_device_name"])
 
     def test_load_instrument_or_effect_falls_back_to_browser_tree_when_direct_lookup_is_missing(self):
         harness = BrowserDeviceHarness()

@@ -9,6 +9,14 @@ PLUGIN_CLASS_NAMES = ("VstPlugInDevice", "Vst3PlugInDevice", "AuPlugInDevice")
 class DeviceOpsMixin(object):
     """Device inspection and mutation commands."""
 
+    def _device_is_rack(self, device):
+        class_name = str(getattr(device, "class_name", "") or "")
+        if getattr(device, "can_have_chains", False):
+            return True
+        if getattr(device, "can_have_drum_pads", False):
+            return True
+        return "Rack" in class_name or "GroupDevice" in class_name
+
     def _get_track_devices(self, params):
         track = self._get_track(params["track_index"])
         devices = []
@@ -22,7 +30,7 @@ class DeviceOpsMixin(object):
                 "num_parameters": len(device.parameters),
                 "is_vst": device.class_name in ("VstPlugInDevice", "Vst3PlugInDevice"),
                 "is_au": device.class_name == "AuPlugInDevice",
-                "is_rack": "Rack" in device.class_name,
+                "is_rack": self._device_is_rack(device),
             }
             try:
                 device_data["class_display_name"] = device.class_display_name

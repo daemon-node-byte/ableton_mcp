@@ -26,6 +26,28 @@ Build a comprehensive Ableton Live 12 MCP server with strong support for:
 
 Python is the preferred implementation language.
 
+## Live Object Model docs
+
+For this project, treat the Ableton Live Object Model as current API ground truth.
+
+- When a task depends on the Live Object Model, use Context7 against the Cycling '74 LOM source before making behavioral claims or changing contracts.
+- Prefer the Context7 library ID `/websites/cycling74_apiref_lom` for LOM lookups.
+- Especially verify rack, chain, Drum Rack, DrumPad, DrumChain, device, mixer, and browser-loading assumptions against that source.
+
+## Remote Script reload workflow
+
+When a Remote Script change must be tested in Ableton Live:
+
+1. sync the repo copy of `AbletonMCP_Remote_Script` into Ableton's installed MIDI Remote Scripts folder
+2. perform the Ableton reload yourself instead of asking the user
+3. rerun the relevant validation commands after the reload
+
+Preferred helper:
+
+- `scripts/reload_ableton_remote_script.sh`
+
+Do not hand the reload step back to the user unless the scripted reload fails and you can explain the exact blocker.
+
 ## Guiding assumptions
 
 1. The current command dispatcher in `AbletonMCP_Remote_Script/__init__.py` is the best available map of intended features.

@@ -123,11 +123,19 @@ Direct Live validation on `2026-04-09` currently covers:
 - connectivity and session inspection
 - Session View clip creation, note write, note read, and cleanup
 - Arrangement View MIDI/audio clip creation, resize, move, delete, and duplication
-- browser discovery and validated built-in loading for instruments and drum kits
+- browser discovery and validated built-in loading for instruments, drum kits, MIDI effects, and audio effects
+- rack, chain, and drum-rack inspection/mutation
+- Drum Rack note remap via `DrumChain.in_note` on the validated Live build
 
 For the full command surface and status map, use [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md) and [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py).
 
 ## 7. Validation Helpers
+
+Canonical Python test command:
+
+```bash
+uv run python -m unittest discover -s tests -q
+```
 
 Arrangement batch:
 
@@ -142,6 +150,12 @@ Browser and loading batch:
 uv run --python 3.11 python scripts/validate_browser_loading_batch.py
 ```
 
+Rack and drum batch:
+
+```bash
+uv run --python 3.11 python scripts/validate_rack_and_drum_batch.py
+```
+
 ## 8. Important Contract Notes
 
 - `create_arrangement_audio_clip` requires an absolute existing `file_path`
@@ -153,6 +167,12 @@ uv run --python 3.11 python scripts/validate_browser_loading_batch.py
 - `load_instrument_or_effect` requires exactly one of `device_name`, `native_device_name`, or `uri`
 - `load_instrument_or_effect` only accepts `target_index` for native insertion and requires `target_index >= 0`
 - `load_drum_kit` requires a loadable drum-kit preset URI and rejects the generic `Drum Rack` device entry
+- generic `Instrument Rack` and `Audio Effect Rack` device entries may load as empty shells with zero chains in the current Live library
+- top-level Drum Racks expose `drum_pads`; inner Drum Racks return zero pad entries
+- `DrumPad.note` is treated as read-only
+- `set_drum_rack_pad_note` remaps via `DrumChain.in_note`, so this repo targets Live 12.3+ for drum-pad note remap support
+- `set_drum_rack_pad_note` readback is validated on the destination pad after remap
+- `set_drum_rack_pad_mute` falls back to chain mute when pad-level mute does not stick in Live
 
 ## 9. Troubleshooting
 

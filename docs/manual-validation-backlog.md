@@ -9,17 +9,18 @@ Confirmed locally on `2026-04-09`:
 - connectivity and session inspection
 - Session View clip and MIDI note round trips
 - Arrangement View MIDI/audio clip creation, edit, delete, and duplication flows
-- browser discovery plus built-in instrument and drum-kit loading
+- browser discovery plus built-in instrument, drum-kit, MIDI-effect, and audio-effect loading
+- rack, chain, and drum-rack inspection/mutation
+- Drum Rack note remap via `DrumChain.in_note` on the validated Live build
 
 For the exact validated commands, use [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md) and [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md).
 
 ## Next Priorities
 
-### 1. Extended browser and device loading
+### 1. Extended third-party browser and device loading
 
 Validate:
 
-- `load_instrument_or_effect` with built-in audio-effect and MIDI-effect targets
 - `load_instrument_or_effect` with third-party plugin URIs if the browser exposes them
 - browser URI classes beyond the validated built-in instrument and drum-kit flows
 - insert-position behavior for non-instrument content

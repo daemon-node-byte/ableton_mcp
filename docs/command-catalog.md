@@ -24,6 +24,8 @@ Direct Live validation currently covers:
 - Session View clip and note round trips
 - Arrangement View clip creation, edit, delete, import, and duplication
 - browser discovery and validated built-in loading
+- built-in MIDI-effect and audio-effect loading
+- rack, chain, and drum-rack inspection/mutation
 
 For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md).
 
@@ -208,7 +210,7 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 | `move_device` | Reorder device on track | plausible |
 | `show_plugin_window` | Show/select plugin window | needs audit |
 | `hide_plugin_window` | Hide/collapse plugin window | needs audit |
-| `load_instrument_or_effect` | Load browser item onto track | likely-complete |
+| `load_instrument_or_effect` | Load browser item onto track | confirmed |
 | `get_device_class_name` | Return device class | plausible |
 | `select_device` | Select device | plausible |
 | `get_selected_device` | Return selected device | plausible |
@@ -217,29 +219,44 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 
 - third-party plugin parameters may still require manual Configure in Live before they appear.
 - `show_plugin_window` and `hide_plugin_window` are still best-effort device-view helpers, not proven plugin editor control.
-- `load_instrument_or_effect` has a validated native insert path plus a validated built-in browser URI path.
+- `load_instrument_or_effect` is validated in Live for native built-in device insertion plus discovered built-in instrument, MIDI-effect, and audio-effect URIs.
+- third-party plugin URIs remain backlog work.
 - `target_index` only applies to native insertion, not browser URI loading.
 
 ## 9. Racks and chains
 
 | Command | Purpose | Status |
 |---|---|---|
-| `get_rack_chains` | List rack chains and chain state | plausible |
-| `get_rack_macros` | List rack macros | plausible |
-| `set_rack_macro` | Set rack macro value | plausible |
-| `get_chain_devices` | List devices in a chain | plausible |
-| `set_chain_mute` | Mute chain | plausible |
-| `set_chain_solo` | Solo chain | plausible |
-| `set_chain_volume` | Set chain volume | plausible |
+| `get_rack_chains` | List rack chains and chain state | confirmed |
+| `get_rack_macros` | List rack macros | confirmed |
+| `set_rack_macro` | Set rack macro value | confirmed |
+| `get_chain_devices` | List devices in a chain | confirmed |
+| `set_chain_mute` | Mute chain | confirmed |
+| `set_chain_solo` | Solo chain | confirmed |
+| `set_chain_volume` | Set chain volume | confirmed |
+
+### Notes
+
+- these commands are now promoted as first-class MCP tools and have repo-level contract coverage.
+- `get_rack_macros` returns stable macro indices intended for `set_rack_macro`.
+- generic `Instrument Rack` and `Audio Effect Rack` device entries load as empty shells in the current Live library, so populated chain validation was proven on a loaded Drum Rack.
 
 ## 10. Drum rack
 
 | Command | Purpose | Status |
 |---|---|---|
-| `get_drum_rack_pads` | List drum rack pads and chain info | plausible |
-| `set_drum_rack_pad_note` | Remap pad note | needs audit |
-| `set_drum_rack_pad_mute` | Mute pad | plausible |
-| `set_drum_rack_pad_solo` | Solo pad | plausible |
+| `get_drum_rack_pads` | List drum rack pads and chain info | confirmed |
+| `set_drum_rack_pad_note` | Remap pad note | confirmed |
+| `set_drum_rack_pad_mute` | Mute pad | confirmed |
+| `set_drum_rack_pad_solo` | Solo pad | confirmed |
+
+### Notes
+
+- these commands are now promoted as first-class MCP tools and have repo-level contract coverage.
+- top-level Drum Racks expose `drum_pads`; inner Drum Racks return zero pad entries.
+- `DrumPad.note` is treated as read-only. `set_drum_rack_pad_note` now remaps via `DrumChain.in_note`, which targets Live 12.3+ and requires a top-level pad with at least one chain.
+- `get_drum_rack_pads` includes chain-backed note metadata so Live-side validators can read back remaps on the destination pad.
+- `set_drum_rack_pad_mute` now reflects effective mute state and falls back to chain mute when pad-level mute does not stick in Live.
 
 ## 11. Browser
 
@@ -248,7 +265,7 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 | `get_browser_tree` | List browser categories/tree | confirmed |
 | `get_browser_items_at_path` | Navigate browser by path | confirmed |
 | `search_browser` | Search browser subtree | confirmed |
-| `load_drum_kit` | Load drum kit by URI/path | likely-complete |
+| `load_drum_kit` | Load drum kit by URI/path | confirmed |
 
 ### Notes
 

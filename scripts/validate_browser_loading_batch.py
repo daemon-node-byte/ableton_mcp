@@ -75,6 +75,18 @@ class BrowserLoadingBatchValidator(object):
             return available_names[0]
         raise AssertionError("No loadable native instrument names were discovered")
 
+    def pick_loadable_browser_item(self, items, label, require_device=None):
+        matches = []
+        for item in items:
+            if not item.get("is_loadable"):
+                continue
+            if require_device is not None and bool(item.get("is_device")) != bool(require_device):
+                continue
+            matches.append(item)
+        if matches:
+            return matches[0]
+        raise AssertionError("No loadable {} were discovered".format(label))
+
     def safe_cleanup(self):
         for track_index in sorted(self.created_track_indices, reverse=True):
             try:
@@ -88,6 +100,8 @@ class BrowserLoadingBatchValidator(object):
             session_info = self.call("get_session_info", {})
             browser_tree = self.call("get_browser_tree", {"category_type": "all"})
             instrument_items = self.call("get_browser_items_at_path", {"path": "instruments"})["items"]
+            audio_effect_items = self.call("get_browser_items_at_path", {"path": "audio_effects"})["items"]
+            midi_effect_items = self.call("get_browser_items_at_path", {"path": "midi_effects"})["items"]
             drum_items = self.call("get_browser_items_at_path", {"path": "drums"})["items"]
             drift_search = self.call("search_browser", {"query": "drift", "category": "instruments"})
 
@@ -99,6 +113,7 @@ class BrowserLoadingBatchValidator(object):
             self.require("instruments" in browser_tree and browser_tree["instruments"], "Browser tree missing instruments")
             self.require("drums" in browser_tree and browser_tree["drums"], "Browser tree missing drums")
             self.require("audio_effects" in browser_tree, "Browser tree missing audio_effects")
+            self.require("midi_effects" in browser_tree, "Browser tree missing midi_effects")
             self.summary["validated_commands"].extend(
                 ["get_browser_tree", "get_browser_items_at_path", "search_browser"]
             )
@@ -113,18 +128,28 @@ class BrowserLoadingBatchValidator(object):
                     raise AssertionError("No loadable instrument URIs were discovered")
                 uri_item = loadable_instrument_items[0]
 
-            drum_kit_item = None
-            for item in drum_items:
-                if item.get("is_loadable") and not item.get("is_device"):
-                    drum_kit_item = item
-                    break
-            if drum_kit_item is None:
-                raise AssertionError("No loadable drum-kit preset URI was discovered")
+            drum_kit_item = self.pick_loadable_browser_item(
+                drum_items,
+                "drum-kit preset URIs",
+                require_device=False,
+            )
+            audio_effect_item = self.pick_loadable_browser_item(
+                audio_effect_items,
+                "built-in audio effects",
+                require_device=True,
+            )
+            midi_effect_item = self.pick_loadable_browser_item(
+                midi_effect_items,
+                "built-in MIDI effects",
+                require_device=True,
+            )
 
             self.summary["discovered_targets"] = {
                 "native_instrument_name": native_name,
                 "instrument_uri": uri_item["uri"],
                 "drum_kit_uri": drum_kit_item["uri"],
+                "audio_effect_uri": audio_effect_item["uri"],
+                "midi_effect_uri": midi_effect_item["uri"],
             }
 
             native_track = self.call("create_midi_track", {})
@@ -133,10 +158,22 @@ class BrowserLoadingBatchValidator(object):
             self.created_track_indices.append(uri_track["index"])
             drum_track = self.call("create_midi_track", {})
             self.created_track_indices.append(drum_track["index"])
+            midi_effect_track = self.call("create_midi_track", {})
+            self.created_track_indices.append(midi_effect_track["index"])
+            audio_effect_track = self.call("create_audio_track", {})
+            self.created_track_indices.append(audio_effect_track["index"])
 
             self.call("set_track_name", {"track_index": native_track["index"], "name": "Browser Batch Native"})
             self.call("set_track_name", {"track_index": uri_track["index"], "name": "Browser Batch URI"})
             self.call("set_track_name", {"track_index": drum_track["index"], "name": "Browser Batch Drums"})
+            self.call(
+                "set_track_name",
+                {"track_index": midi_effect_track["index"], "name": "Browser Batch MIDI Effects"},
+            )
+            self.call(
+                "set_track_name",
+                {"track_index": audio_effect_track["index"], "name": "Browser Batch Audio Effects"},
+            )
 
             native_before = len(self.track_devices(native_track["index"]))
             native_result = self.call(
@@ -165,8 +202,44 @@ class BrowserLoadingBatchValidator(object):
             self.require(drum_result["mode"] == "drum_kit_load", "Drum kit load returned wrong mode")
             self.require(len(drum_devices) > drum_before, "Drum kit load did not grow device count")
 
+            midi_effect_before = len(self.track_devices(midi_effect_track["index"]))
+            midi_effect_result = self.call(
+                "load_instrument_or_effect",
+                {"track_index": midi_effect_track["index"], "uri": midi_effect_item["uri"]},
+            )
+            midi_effect_devices = self.wait_for_device_growth(midi_effect_track["index"], midi_effect_before)
+            self.require(
+                midi_effect_result["mode"] == "browser_uri_load",
+                "MIDI effect load returned wrong mode",
+            )
+            self.require(
+                len(midi_effect_devices) > midi_effect_before,
+                "Built-in MIDI effect load did not grow device count",
+            )
+
+            audio_effect_before = len(self.track_devices(audio_effect_track["index"]))
+            audio_effect_result = self.call(
+                "load_instrument_or_effect",
+                {"track_index": audio_effect_track["index"], "uri": audio_effect_item["uri"]},
+            )
+            audio_effect_devices = self.wait_for_device_growth(audio_effect_track["index"], audio_effect_before)
+            self.require(
+                audio_effect_result["mode"] == "browser_uri_load",
+                "Audio effect load returned wrong mode",
+            )
+            self.require(
+                len(audio_effect_devices) > audio_effect_before,
+                "Built-in audio effect load did not grow device count",
+            )
+
             self.summary["validated_commands"].extend(
-                ["load_instrument_or_effect:native", "load_instrument_or_effect:uri", "load_drum_kit"]
+                [
+                    "load_instrument_or_effect:native",
+                    "load_instrument_or_effect:uri",
+                    "load_drum_kit",
+                    "load_instrument_or_effect:midi_effect_uri",
+                    "load_instrument_or_effect:audio_effect_uri",
+                ]
             )
 
             self.expect_error(
