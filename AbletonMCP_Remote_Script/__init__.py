@@ -21,6 +21,7 @@ from .arrangement_ops import ArrangementOpsMixin
 from .browser_ops import BrowserOpsMixin
 from .core import CoreOpsMixin
 from .device_ops import DeviceOpsMixin
+from .memory_bank_ops import MemoryBankOpsMixin
 from .rack_ops import RackOpsMixin
 from .scene_ops import SceneOpsMixin
 from .session_clip_ops import SessionClipOpsMixin
@@ -54,6 +55,7 @@ class AbletonMCP(
     SceneOpsMixin,
     DeviceOpsMixin,
     RackOpsMixin,
+    MemoryBankOpsMixin,
     BrowserOpsMixin,
     TakeLaneOpsMixin,
     ViewOpsMixin,
@@ -227,6 +229,16 @@ class AbletonMCP(
             return self._get_cpu_load()
         elif cmd_type == "get_session_path":
             return self._get_session_path()
+        elif cmd_type == "read_memory_bank":
+            return self._read_memory_bank(params)
+        elif cmd_type == "write_memory_bank":
+            return self._schedule_and_wait(lambda: self._write_memory_bank(params))
+        elif cmd_type == "append_rack_entry":
+            return self._schedule_and_wait(lambda: self._append_rack_entry(params))
+        elif cmd_type == "get_system_owned_racks":
+            return self._get_system_owned_racks()
+        elif cmd_type == "refresh_rack_memory_entry":
+            return self._schedule_and_wait(lambda: self._refresh_rack_memory_entry(params))
         elif cmd_type == "get_locators":
             return self._get_locators()
         elif cmd_type == "create_locator":
@@ -429,6 +441,12 @@ class AbletonMCP(
             return self._schedule_and_wait(lambda: self._set_device_parameter_by_name(params))
         elif cmd_type == "get_device_parameter_by_name":
             return self._get_device_parameter_by_name(params)
+        elif cmd_type == "get_device_parameters_at_path":
+            return self._get_device_parameters_at_path(params)
+        elif cmd_type == "set_device_parameter_at_path":
+            return self._schedule_and_wait(lambda: self._set_device_parameter_at_path(params))
+        elif cmd_type == "set_device_parameter_by_name_at_path":
+            return self._schedule_and_wait(lambda: self._set_device_parameter_by_name_at_path(params))
         elif cmd_type == "toggle_device":
             return self._schedule_and_wait(lambda: self._toggle_device(params))
         elif cmd_type == "set_device_enabled":
@@ -455,6 +473,16 @@ class AbletonMCP(
             return self._get_rack_macros(params)
         elif cmd_type == "set_rack_macro":
             return self._schedule_and_wait(lambda: self._set_rack_macro(params))
+        elif cmd_type == "create_rack":
+            return self._schedule_and_wait(lambda: self._create_rack(params))
+        elif cmd_type == "insert_rack_chain":
+            return self._schedule_and_wait(lambda: self._insert_rack_chain(params))
+        elif cmd_type == "insert_device_in_chain":
+            return self._schedule_and_wait(lambda: self._insert_device_in_chain(params))
+        elif cmd_type == "get_rack_structure":
+            return self._get_rack_structure(params)
+        elif cmd_type == "apply_rack_blueprint":
+            return self._schedule_and_wait(lambda: self._apply_rack_blueprint(params))
         elif cmd_type == "get_chain_devices":
             return self._get_chain_devices(params)
         elif cmd_type == "set_chain_mute":

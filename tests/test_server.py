@@ -34,6 +34,12 @@ class ServerRegistrationTests(unittest.TestCase):
         self.assertIn("stability", result)
         self.assertEqual({"ok": True}, result["result"])
 
+    def test_get_session_path_wrapper_forwards_expected_params(self):
+        with mock.patch.object(ableton_server, "_invoke", return_value={"path": "/tmp/Test.als"}) as invoke_mock:
+            result = ableton_server.get_session_path()
+        invoke_mock.assert_called_once_with("get_session_path", {})
+        self.assertEqual({"path": "/tmp/Test.als"}, result)
+
     def test_create_arrangement_audio_clip_wrapper_forwards_expected_params(self):
         with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
             result = ableton_server.create_arrangement_audio_clip(2, "/tmp/test.wav", 64.0)
@@ -97,6 +103,34 @@ class ServerRegistrationTests(unittest.TestCase):
     def test_rack_and_drum_wrappers_forward_expected_params(self):
         cases = (
             (
+                "create_rack",
+                lambda: ableton_server.create_rack(2, "audio_effect", "Mix Rack", target_path="devices 0 chains 1"),
+                "create_rack",
+                {
+                    "track_index": 2,
+                    "rack_type": "audio_effect",
+                    "name": "Mix Rack",
+                    "target_path": "devices 0 chains 1",
+                },
+            ),
+            (
+                "insert_rack_chain",
+                lambda: ableton_server.insert_rack_chain(2, "devices 0", "Tone Chain", index=1),
+                "insert_rack_chain",
+                {"track_index": 2, "rack_path": "devices 0", "name": "Tone Chain", "index": 1},
+            ),
+            (
+                "insert_device_in_chain",
+                lambda: ableton_server.insert_device_in_chain(2, "devices 0 chains 1", "Eq8", target_index=0),
+                "insert_device_in_chain",
+                {
+                    "track_index": 2,
+                    "chain_path": "devices 0 chains 1",
+                    "native_device_name": "Eq8",
+                    "target_index": 0,
+                },
+            ),
+            (
                 "get_rack_chains",
                 lambda: ableton_server.get_rack_chains(2, 5),
                 "get_rack_chains",
@@ -113,6 +147,12 @@ class ServerRegistrationTests(unittest.TestCase):
                 lambda: ableton_server.set_rack_macro(2, 5, 1, 0.75),
                 "set_rack_macro",
                 {"track_index": 2, "device_index": 5, "macro_index": 1, "value": 0.75},
+            ),
+            (
+                "get_rack_structure",
+                lambda: ableton_server.get_rack_structure(2, "devices 0"),
+                "get_rack_structure",
+                {"track_index": 2, "rack_path": "devices 0"},
             ),
             (
                 "get_chain_devices",
@@ -139,10 +179,73 @@ class ServerRegistrationTests(unittest.TestCase):
                 {"track_index": 2, "device_index": 5, "chain_index": 0, "volume": 0.42},
             ),
             (
+                "get_device_parameters_at_path",
+                lambda: ableton_server.get_device_parameters_at_path(2, "devices 0 chains 0 devices 1"),
+                "get_device_parameters_at_path",
+                {"track_index": 2, "device_path": "devices 0 chains 0 devices 1"},
+            ),
+            (
+                "set_device_parameter_at_path",
+                lambda: ableton_server.set_device_parameter_at_path(2, "devices 0 chains 0 devices 1", 3, 0.42),
+                "set_device_parameter_at_path",
+                {
+                    "track_index": 2,
+                    "device_path": "devices 0 chains 0 devices 1",
+                    "parameter_index": 3,
+                    "value": 0.42,
+                },
+            ),
+            (
+                "set_device_parameter_by_name_at_path",
+                lambda: ableton_server.set_device_parameter_by_name_at_path(
+                    2,
+                    "devices 0 chains 0 devices 1",
+                    "Gain A",
+                    6.0,
+                ),
+                "set_device_parameter_by_name_at_path",
+                {
+                    "track_index": 2,
+                    "device_path": "devices 0 chains 0 devices 1",
+                    "name": "Gain A",
+                    "value": 6.0,
+                },
+            ),
+            (
                 "get_drum_rack_pads",
                 lambda: ableton_server.get_drum_rack_pads(2, 5),
                 "get_drum_rack_pads",
                 {"track_index": 2, "device_index": 5},
+            ),
+            (
+                "read_memory_bank",
+                lambda: ableton_server.read_memory_bank("racks.md"),
+                "read_memory_bank",
+                {"file_name": "racks.md"},
+            ),
+            (
+                "write_memory_bank",
+                lambda: ableton_server.write_memory_bank("racks.md", "# Rack Catalog"),
+                "write_memory_bank",
+                {"file_name": "racks.md", "content": "# Rack Catalog"},
+            ),
+            (
+                "append_rack_entry",
+                lambda: ableton_server.append_rack_entry("## Rack: rack_1"),
+                "append_rack_entry",
+                {"rack_data": "## Rack: rack_1"},
+            ),
+            (
+                "get_system_owned_racks",
+                lambda: ableton_server.get_system_owned_racks(),
+                "get_system_owned_racks",
+                {},
+            ),
+            (
+                "refresh_rack_memory_entry",
+                lambda: ableton_server.refresh_rack_memory_entry(2, "devices 0"),
+                "refresh_rack_memory_entry",
+                {"track_index": 2, "rack_path": "devices 0"},
             ),
             (
                 "set_drum_rack_pad_note",
@@ -170,3 +273,15 @@ class ServerRegistrationTests(unittest.TestCase):
                     result = caller()
                 invoke_mock.assert_called_once_with(command_name, expected_params)
                 self.assertEqual({"ok": True}, result)
+
+    def test_apply_rack_blueprint_wrapper_forwards_expected_params(self):
+        blueprint = {
+            "track_index": 2,
+            "rack_type": "audio_effect",
+            "rack_name": "Mix Rack",
+            "chains": [{"name": "EQ"}],
+        }
+        with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
+            result = ableton_server.apply_rack_blueprint(blueprint)
+        invoke_mock.assert_called_once_with("apply_rack_blueprint", {"blueprint": blueprint})
+        self.assertEqual({"ok": True}, result)

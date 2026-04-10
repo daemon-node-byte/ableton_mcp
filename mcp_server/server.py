@@ -45,6 +45,11 @@ def get_session_info():
     return _invoke("get_session_info", {})
 
 
+@mcp.tool(description=get_command_spec("get_session_path").tool_description)
+def get_session_path():
+    return _invoke("get_session_path", {})
+
+
 @mcp.tool(description=get_command_spec("get_current_song_time").tool_description)
 def get_current_song_time():
     return _invoke("get_current_song_time", {})
@@ -259,6 +264,39 @@ def load_drum_kit(track_index: int, rack_uri: str):
     return _invoke("load_drum_kit", {"track_index": track_index, "rack_uri": rack_uri})
 
 
+@mcp.tool(description=get_command_spec("create_rack").tool_description)
+def create_rack(track_index: int, rack_type: str, name: str, target_path: Optional[str] = None):
+    params = {"track_index": track_index, "rack_type": rack_type, "name": name}
+    if target_path is not None:
+        params["target_path"] = target_path
+    return _invoke("create_rack", params)
+
+
+@mcp.tool(description=get_command_spec("insert_rack_chain").tool_description)
+def insert_rack_chain(track_index: int, rack_path: str, name: str, index: Optional[int] = None):
+    params = {"track_index": track_index, "rack_path": rack_path, "name": name}
+    if index is not None:
+        params["index"] = index
+    return _invoke("insert_rack_chain", params)
+
+
+@mcp.tool(description=get_command_spec("insert_device_in_chain").tool_description)
+def insert_device_in_chain(
+    track_index: int,
+    chain_path: str,
+    native_device_name: str,
+    target_index: Optional[int] = None,
+):
+    params = {
+        "track_index": track_index,
+        "chain_path": chain_path,
+        "native_device_name": native_device_name,
+    }
+    if target_index is not None:
+        params["target_index"] = target_index
+    return _invoke("insert_device_in_chain", params)
+
+
 @mcp.tool(description=get_command_spec("get_rack_chains").tool_description)
 def get_rack_chains(track_index: int, device_index: int):
     return _invoke("get_rack_chains", {"track_index": track_index, "device_index": device_index})
@@ -280,6 +318,11 @@ def set_rack_macro(track_index: int, device_index: int, macro_index: int, value:
             "value": value,
         },
     )
+
+
+@mcp.tool(description=get_command_spec("get_rack_structure").tool_description)
+def get_rack_structure(track_index: int, rack_path: str):
+    return _invoke("get_rack_structure", {"track_index": track_index, "rack_path": rack_path})
 
 
 @mcp.tool(description=get_command_spec("get_chain_devices").tool_description)
@@ -358,6 +401,11 @@ def set_drum_rack_pad_solo(track_index: int, device_index: int, note: int, solo:
     )
 
 
+@mcp.tool(description=get_command_spec("apply_rack_blueprint").tool_description)
+def apply_rack_blueprint(blueprint: JsonDict):
+    return _invoke("apply_rack_blueprint", {"blueprint": blueprint})
+
+
 @mcp.tool(description=get_command_spec("get_track_devices").tool_description)
 def get_track_devices(track_index: int):
     return _invoke("get_track_devices", {"track_index": track_index})
@@ -384,6 +432,63 @@ def get_device_parameter_by_name(track_index: int, device_index: int, name: str)
     return _invoke(
         "get_device_parameter_by_name",
         {"track_index": track_index, "device_index": device_index, "name": name},
+    )
+
+
+@mcp.tool(description=get_command_spec("get_device_parameters_at_path").tool_description)
+def get_device_parameters_at_path(track_index: int, device_path: str):
+    return _invoke(
+        "get_device_parameters_at_path",
+        {"track_index": track_index, "device_path": device_path},
+    )
+
+
+@mcp.tool(description=get_command_spec("set_device_parameter_at_path").tool_description)
+def set_device_parameter_at_path(track_index: int, device_path: str, parameter_index: int, value: float):
+    return _invoke(
+        "set_device_parameter_at_path",
+        {
+            "track_index": track_index,
+            "device_path": device_path,
+            "parameter_index": parameter_index,
+            "value": value,
+        },
+    )
+
+
+@mcp.tool(description=get_command_spec("set_device_parameter_by_name_at_path").tool_description)
+def set_device_parameter_by_name_at_path(track_index: int, device_path: str, name: str, value: float):
+    return _invoke(
+        "set_device_parameter_by_name_at_path",
+        {"track_index": track_index, "device_path": device_path, "name": name, "value": value},
+    )
+
+
+@mcp.tool(description=get_command_spec("read_memory_bank").tool_description)
+def read_memory_bank(file_name: str):
+    return _invoke("read_memory_bank", {"file_name": file_name})
+
+
+@mcp.tool(description=get_command_spec("write_memory_bank").tool_description)
+def write_memory_bank(file_name: str, content: str):
+    return _invoke("write_memory_bank", {"file_name": file_name, "content": content})
+
+
+@mcp.tool(description=get_command_spec("append_rack_entry").tool_description)
+def append_rack_entry(rack_data: str):
+    return _invoke("append_rack_entry", {"rack_data": rack_data})
+
+
+@mcp.tool(description=get_command_spec("get_system_owned_racks").tool_description)
+def get_system_owned_racks():
+    return _invoke("get_system_owned_racks", {})
+
+
+@mcp.tool(description=get_command_spec("refresh_rack_memory_entry").tool_description)
+def refresh_rack_memory_entry(track_index: int, rack_path: str):
+    return _invoke(
+        "refresh_rack_memory_entry",
+        {"track_index": track_index, "rack_path": rack_path},
     )
 
 

@@ -118,12 +118,16 @@ On Linux, add `--add-host=host.docker.internal:host-gateway` to the Docker args.
 
 ## 6. Current Verified Scope
 
-Direct Live validation on `2026-04-09` currently covers:
+Direct Live validation on `2026-04-10` currently covers:
 
 - connectivity and session inspection
 - Session View clip creation, note write, note read, and cleanup
 - Arrangement View MIDI/audio clip creation, resize, move, delete, and duplication
 - browser discovery and validated built-in loading for instruments, drum kits, MIDI effects, and audio effects
+- system-owned Instrument Rack and Audio Effect Rack creation, chain insertion, built-in device insertion, and recursive structure readback
+- nested device parameter read/write inside rack trees through track-relative LOM-style paths
+- project-root Memory Bank reads and writes for saved Live Sets
+- blueprint-driven rack creation with stable rejection of unsupported native macro-mapping directives
 - rack, chain, and drum-rack inspection/mutation
 - Drum Rack note remap via `DrumChain.in_note` on the validated Live build
 
@@ -156,6 +160,12 @@ Rack and drum batch:
 uv run --python 3.11 python scripts/validate_rack_and_drum_batch.py
 ```
 
+System-owned rack automation batch:
+
+```bash
+uv run --python 3.11 python scripts/validate_system_owned_racks_batch.py
+```
+
 ## 8. Important Contract Notes
 
 - `create_arrangement_audio_clip` requires an absolute existing `file_path`
@@ -168,6 +178,11 @@ uv run --python 3.11 python scripts/validate_rack_and_drum_batch.py
 - `load_instrument_or_effect` only accepts `target_index` for native insertion and requires `target_index >= 0`
 - `load_drum_kit` requires a loadable drum-kit preset URI and rejects the generic `Drum Rack` device entry
 - generic `Instrument Rack` and `Audio Effect Rack` device entries may load as empty shells with zero chains in the current Live library
+- system-owned rack addressing uses track-relative LOM-style paths such as `devices 0`, `devices 0 chains 1`, and `devices 0 chains 1 devices 2`
+- `create_rack`, `insert_rack_chain`, `insert_device_in_chain`, `apply_rack_blueprint`, `write_memory_bank`, and `refresh_rack_memory_entry` require a saved Live Set when they need project-root Memory Bank persistence
+- shorthand native device names such as `Eq8` and `AutoFilter` are normalized to the validated Live device names before insertion
+- EQ Eight shorthand parameter names such as `Gain A`, `Frequency A`, and `Q A` are normalized to the validated Live parameter names during nested rack tuning
+- `apply_rack_blueprint` rejects `macro_mappings`, `macro_to_macro_mappings`, and similar native macro-authoring requests with a stable unsupported error in this pass
 - top-level Drum Racks expose `drum_pads`; inner Drum Racks return zero pad entries
 - `DrumPad.note` is treated as read-only
 - `set_drum_rack_pad_note` remaps via `DrumChain.in_note`, so this repo targets Live 12.3+ for drum-pad note remap support

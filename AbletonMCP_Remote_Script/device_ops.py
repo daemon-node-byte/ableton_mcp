@@ -2,12 +2,29 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import re
+
 
 PLUGIN_CLASS_NAMES = ("VstPlugInDevice", "Vst3PlugInDevice", "AuPlugInDevice")
+NATIVE_DEVICE_NAME_ALIASES = {
+    "eq8": "EQ Eight",
+    "eq eight": "EQ Eight",
+    "autofilter": "Auto Filter",
+    "auto filter": "Auto Filter",
+    "instrument rack": "Instrument Rack",
+    "audio effect rack": "Audio Effect Rack",
+}
 
 
 class DeviceOpsMixin(object):
     """Device inspection and mutation commands."""
+
+    def _canonical_native_device_name(self, device_name):
+        normalized = str(device_name or "").strip()
+        if not normalized:
+            return normalized
+        alias = NATIVE_DEVICE_NAME_ALIASES.get(normalized.lower())
+        return alias or normalized
 
     def _device_is_rack(self, device):
         class_name = str(getattr(device, "class_name", "") or "")
@@ -17,47 +34,48 @@ class DeviceOpsMixin(object):
             return True
         return "Rack" in class_name or "GroupDevice" in class_name
 
-    def _get_track_devices(self, params):
-        track = self._get_track(params["track_index"])
-        devices = []
-        for index, device in enumerate(track.devices):
-            device_data = {
-                "index": index,
-                "name": device.name,
-                "class_name": device.class_name,
-                "type": device.type,
-                "is_active": device.is_active,
-                "num_parameters": len(device.parameters),
-                "is_vst": device.class_name in ("VstPlugInDevice", "Vst3PlugInDevice"),
-                "is_au": device.class_name == "AuPlugInDevice",
-                "is_rack": self._device_is_rack(device),
-            }
-            try:
-                device_data["class_display_name"] = device.class_display_name
-            except Exception:
-                pass
-            devices.append(device_data)
-        return {"track_index": int(params["track_index"]), "devices": devices}
+    def _device_parameter_to_dict(self, parameter, index):
+        parameter_data = {
+            "index": index,
+            "name": parameter.name,
+            "value": round(float(parameter.value), 6),
+            "min": float(parameter.min),
+            "max": float(parameter.max),
+            "display_value": str(parameter),
+            "is_quantized": parameter.is_quantized,
+            "is_enabled": parameter.is_enabled,
+        }
+        try:
+            parameter_data["automation_state"] = parameter.automation_state
+        except Exception:
+            pass
+        return parameter_data
 
-    def _get_device_parameters(self, params):
-        device = self._get_device(params["track_index"], params["device_index"])
+    def _device_describe(self, device, index=None, path=None):
+        device_data = {
+            "name": device.name,
+            "class_name": device.class_name,
+            "type": device.type,
+            "is_active": device.is_active,
+            "num_parameters": len(device.parameters),
+            "is_vst": device.class_name in ("VstPlugInDevice", "Vst3PlugInDevice"),
+            "is_au": device.class_name == "AuPlugInDevice",
+            "is_rack": self._device_is_rack(device),
+        }
+        if index is not None:
+            device_data["index"] = index
+        if path is not None:
+            device_data["path"] = path
+        try:
+            device_data["class_display_name"] = device.class_display_name
+        except Exception:
+            pass
+        return device_data
+
+    def _device_parameters_payload(self, device):
         parameters = []
         for index, parameter in enumerate(device.parameters):
-            parameter_data = {
-                "index": index,
-                "name": parameter.name,
-                "value": round(float(parameter.value), 6),
-                "min": float(parameter.min),
-                "max": float(parameter.max),
-                "display_value": str(parameter),
-                "is_quantized": parameter.is_quantized,
-                "is_enabled": parameter.is_enabled,
-            }
-            try:
-                parameter_data["automation_state"] = parameter.automation_state
-            except Exception:
-                pass
-            parameters.append(parameter_data)
+            parameters.append(self._device_parameter_to_dict(parameter, index))
         return {
             "device_name": device.name,
             "class_name": device.class_name,
@@ -71,15 +89,58 @@ class DeviceOpsMixin(object):
             ) if device.class_name in PLUGIN_CLASS_NAMES else "",
         }
 
-    def _set_device_parameter(self, params):
-        device = self._get_device(params["track_index"], params["device_index"])
-        parameter_index = int(params["parameter_index"])
-        if parameter_index < 0 or parameter_index >= len(device.parameters):
-            raise ValueError("Parameter index {} out of range".format(parameter_index))
-        parameter = device.parameters[parameter_index]
+    def _device_find_parameter_by_name(self, device, name):
+        exact_match = None
+        casefold_match = None
+        name_lower = str(name).lower()
+        for index, parameter in enumerate(device.parameters):
+            if parameter.name == name:
+                exact_match = (index, parameter)
+                break
+            if casefold_match is None and parameter.name.lower() == name_lower:
+                casefold_match = (index, parameter)
+        if exact_match is not None:
+            return exact_match
+        if casefold_match is not None:
+            return casefold_match
+
+        eq8_match = self._device_find_eq8_parameter_alias(device, name)
+        if eq8_match is not None:
+            return eq8_match
+
+        available = [parameter.name for parameter in device.parameters]
+        raise ValueError(
+            "Parameter '{}' not found in '{}'. Available: {}".format(
+                name, device.name, available[:20]
+            )
+        )
+
+    def _device_find_eq8_parameter_alias(self, device, name):
+        class_name = str(getattr(device, "class_name", "") or "")
+        if class_name.lower() != "eq8":
+            return None
+        match = re.match(r"^(?:(\d+)\s+)?(frequency|gain|q|resonance)\s+([ab])$", str(name).strip(), re.I)
+        if not match:
+            return None
+
+        band_number = match.group(1) or "1"
+        parameter_kind = match.group(2).lower()
+        channel_name = match.group(3).upper()
+        if parameter_kind == "q":
+            parameter_kind = "resonance"
+        candidate_name = "{} {} {}".format(
+            band_number,
+            parameter_kind.title(),
+            channel_name,
+        )
+        for index, parameter in enumerate(device.parameters):
+            if parameter.name.lower() == candidate_name.lower():
+                return index, parameter
+        return None
+
+    def _device_set_parameter_value(self, parameter, value):
         if not parameter.is_enabled:
             raise ValueError("Parameter '{}' is not enabled".format(parameter.name))
-        value = float(params["value"])
         if not (parameter.min <= value <= parameter.max):
             raise ValueError(
                 "Value {} out of range [{}, {}] for '{}'".format(
@@ -87,6 +148,26 @@ class DeviceOpsMixin(object):
                 )
             )
         parameter.value = value
+
+    def _get_track_devices(self, params):
+        track = self._get_track(params["track_index"])
+        devices = []
+        for index, device in enumerate(track.devices):
+            devices.append(self._device_describe(device, index=index))
+        return {"track_index": int(params["track_index"]), "devices": devices}
+
+    def _get_device_parameters(self, params):
+        device = self._get_device(params["track_index"], params["device_index"])
+        return self._device_parameters_payload(device)
+
+    def _set_device_parameter(self, params):
+        device = self._get_device(params["track_index"], params["device_index"])
+        parameter_index = int(params["parameter_index"])
+        if parameter_index < 0 or parameter_index >= len(device.parameters):
+            raise ValueError("Parameter index {} out of range".format(parameter_index))
+        parameter = device.parameters[parameter_index]
+        value = float(params["value"])
+        self._device_set_parameter_value(parameter, value)
         return {
             "parameter_index": parameter_index,
             "name": parameter.name,
@@ -98,31 +179,8 @@ class DeviceOpsMixin(object):
         device = self._get_device(params["track_index"], params["device_index"])
         name = str(params["name"])
         value = float(params["value"])
-        matched = None
-        for parameter in device.parameters:
-            if parameter.name == name:
-                matched = parameter
-                break
-        if matched is None:
-            name_lower = name.lower()
-            for parameter in device.parameters:
-                if parameter.name.lower() == name_lower:
-                    matched = parameter
-                    break
-        if matched is None:
-            available = [parameter.name for parameter in device.parameters]
-            raise ValueError(
-                "Parameter '{}' not found in '{}'. Available: {}".format(
-                    name, device.name, available[:20]
-                )
-            )
-        if not (matched.min <= value <= matched.max):
-            raise ValueError(
-                "Value {} out of range [{}, {}] for '{}'".format(
-                    value, matched.min, matched.max, matched.name
-                )
-            )
-        matched.value = value
+        _, matched = self._device_find_parameter_by_name(device, name)
+        self._device_set_parameter_value(matched, value)
         return {
             "name": matched.name,
             "value": float(matched.value),
@@ -132,19 +190,8 @@ class DeviceOpsMixin(object):
     def _get_device_parameter_by_name(self, params):
         device = self._get_device(params["track_index"], params["device_index"])
         name = str(params["name"])
-        for index, parameter in enumerate(device.parameters):
-            if parameter.name == name or parameter.name.lower() == name.lower():
-                return {
-                    "index": index,
-                    "name": parameter.name,
-                    "value": float(parameter.value),
-                    "min": float(parameter.min),
-                    "max": float(parameter.max),
-                    "display_value": str(parameter),
-                    "is_quantized": parameter.is_quantized,
-                    "is_enabled": parameter.is_enabled,
-                }
-        raise ValueError("Parameter '{}' not found in '{}'".format(name, device.name))
+        index, parameter = self._device_find_parameter_by_name(device, name)
+        return self._device_parameter_to_dict(parameter, index)
 
     def _toggle_device(self, params):
         device = self._get_device(params["track_index"], params["device_index"])
@@ -213,7 +260,7 @@ class DeviceOpsMixin(object):
 
         source_name, source_value = sources[0]
         if source_name in ("device_name", "native_device_name"):
-            device_name = source_value
+            device_name = self._canonical_native_device_name(source_value)
             if not hasattr(track, "insert_device"):
                 raise ValueError("Track.insert_device is unavailable in this Live version")
             if target_index is not None and target_index > len(track.devices):
