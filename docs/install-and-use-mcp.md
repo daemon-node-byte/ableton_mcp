@@ -126,6 +126,7 @@ Direct Live validation on `2026-04-10` currently covers:
 - Session View clip creation, note write, note read, and cleanup
 - Arrangement View MIDI/audio clip creation, resize, move, delete, and duplication
 - browser discovery and validated built-in loading for instruments, drum kits, MIDI effects, and audio effects
+- top-level device inspection, selection, parameter read/write, activator-helper enable/disable, same-track reordering, deletion, and device-view collapse/expand on native devices
 - system-owned Instrument Rack and Audio Effect Rack creation, chain insertion, built-in device insertion, and recursive structure readback
 - nested device parameter read/write inside rack trees through track-relative LOM-style paths
 - project-root Memory Bank reads and writes for saved Live Sets
@@ -174,6 +175,12 @@ Track control batch:
 uv run --python 3.11 python scripts/validate_track_controls_batch.py
 ```
 
+Device audit batch:
+
+```bash
+uv run --python 3.11 python scripts/validate_device_audit_batch.py
+```
+
 ## 8. Important Contract Notes
 
 - `create_arrangement_audio_clip` requires an absolute existing `file_path`
@@ -189,6 +196,11 @@ uv run --python 3.11 python scripts/validate_track_controls_batch.py
 - `search_browser` requires a non-empty query
 - `load_instrument_or_effect` requires exactly one of `device_name`, `native_device_name`, or `uri`
 - `load_instrument_or_effect` only accepts `target_index` for native insertion and requires `target_index >= 0`
+- native `device_name` / `native_device_name` insertion is limited by `Track.insert_device`, which the LOM documents as native Live devices only
+- top-level `device_index` currently follows the observed `track.devices` ordering from the validated Python Remote Script surface; on Live 12.3.7 this excluded the mixer device on a fresh disposable MIDI track
+- `toggle_device` and `set_device_enabled` are confirmed as activator-parameter helpers on native devices, not universal device power setters
+- `move_device` is confirmed for same-track top-level native-device reordering on the validated Live 12.3.7 build
+- `show_plugin_window` and `hide_plugin_window` are confirmed only for `Device.View.is_collapsed` collapse/expand behavior, not plugin editor window control
 - `load_drum_kit` requires a loadable drum-kit preset URI and rejects the generic `Drum Rack` device entry
 - generic `Instrument Rack` and `Audio Effect Rack` device entries may load as empty shells with zero chains in the current Live library
 - `set_send_level`, `get_return_tracks`, `get_return_track_info`, `set_return_volume`, and `set_return_pan` are confirmed in sets that already contain at least one return track

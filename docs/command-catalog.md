@@ -27,6 +27,7 @@ Direct Live validation currently covers:
 - Arrangement View clip creation, edit, delete, import, and duplication
 - browser discovery and validated built-in loading
 - built-in MIDI-effect and audio-effect loading
+- top-level device inspection, selection, parameter read/write, activator-helper enable/disable, same-track reordering, deletion, and device-view collapse/expand on native devices
 - system-owned Instrument Rack and Audio Effect Rack creation, chain insertion, nested device insertion, and recursive structure readback
 - nested rack-device parameter read/write via track-relative LOM-style paths
 - project-root Memory Bank persistence for system-owned racks in saved Live Sets
@@ -214,30 +215,36 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 
 | Command | Purpose | Status |
 |---|---|---|
-| `get_track_devices` | List devices on track | plausible |
-| `get_device_parameters` | List parameters for a device | plausible |
-| `set_device_parameter` | Set parameter by index | plausible |
-| `set_device_parameter_by_name` | Set parameter by name | plausible |
-| `get_device_parameter_by_name` | Read parameter by name | plausible |
+| `get_track_devices` | List devices on track | confirmed |
+| `get_device_parameters` | List parameters for a device | confirmed |
+| `set_device_parameter` | Set parameter by index | confirmed |
+| `set_device_parameter_by_name` | Set parameter by name | confirmed |
+| `get_device_parameter_by_name` | Read parameter by name | confirmed |
 | `get_device_parameters_at_path` | List parameters for a nested device in a rack tree | confirmed |
 | `set_device_parameter_at_path` | Set nested device parameter by index using a rack path | confirmed |
 | `set_device_parameter_by_name_at_path` | Set nested device parameter by name using a rack path | confirmed |
-| `toggle_device` | Toggle device active state | needs audit |
-| `set_device_enabled` | Set device enabled state | plausible |
-| `delete_device` | Delete device from track | plausible |
-| `move_device` | Reorder device on track | plausible |
-| `show_plugin_window` | Show/select plugin window | needs audit |
-| `hide_plugin_window` | Hide/collapse plugin window | needs audit |
+| `toggle_device` | Activator-parameter toggle helper | confirmed |
+| `set_device_enabled` | Activator-parameter enable helper | confirmed |
+| `delete_device` | Delete device from track | confirmed |
+| `move_device` | Reorder device on track | confirmed |
+| `show_plugin_window` | Expand device in the device chain | confirmed |
+| `hide_plugin_window` | Collapse device in the device chain | confirmed |
 | `load_instrument_or_effect` | Load browser item onto track | confirmed |
-| `get_device_class_name` | Return device class | plausible |
-| `select_device` | Select device | plausible |
-| `get_selected_device` | Return selected device | plausible |
+| `get_device_class_name` | Return device class | confirmed |
+| `select_device` | Select device | confirmed |
+| `get_selected_device` | Return selected device | confirmed |
 
 ### Notes
 
+- top-level device inspection and mutation were revalidated in Ableton Live 12.3.7 on 2026-04-11 on a disposable MIDI track loaded with native devices.
+- on the validated Python Remote Script surface, `get_track_devices` on a fresh disposable track returned no mixer device even though the LOM docs say `Track.devices` includes it. Top-level `device_index` now reflects the observed `track.devices` ordering for this build.
 - third-party plugin parameters may still require manual Configure in Live before they appear.
-- `show_plugin_window` and `hide_plugin_window` are still best-effort device-view helpers, not proven plugin editor control.
-- `load_instrument_or_effect` is validated in Live for native built-in device insertion plus discovered built-in instrument, MIDI-effect, and audio-effect URIs.
+- `toggle_device` and `set_device_enabled` are confirmed only for the narrowed activator-parameter helper contract. The LOM exposes `Device.is_active` as read-only, so these commands should not be treated as universal device power setters.
+- `move_device` is confirmed for same-track top-level native-device reordering on the validated Live 12.3.7 build and uses the documented `Song.move_device(...)` API on the Python surface.
+- `get_selected_device` should be interpreted as `song.view.selected_track` plus `selected_track.view.selected_device`, not an undocumented song-level selected-device child.
+- `show_plugin_window` and `hide_plugin_window` are confirmed only for device-view collapse/expand via `Device.View.is_collapsed`, not plugin editor control.
+- `load_instrument_or_effect` is validated in Live for native built-in device insertion plus discovered built-in instrument, MIDI-effect, and audio-effect URIs, and native insertion metadata was revalidated on 2026-04-11 during the device audit pass.
+- native `device_name` / `native_device_name` insertion is limited by `Track.insert_device`, which the LOM documents as native Live devices only. Max for Live and third-party plugin insertion remain backlog work.
 - third-party plugin URIs remain backlog work.
 - `target_index` only applies to native insertion, not browser URI loading.
 - the path-based device commands use track-relative LOM-style paths such as `devices 0 chains 1 devices 2`.

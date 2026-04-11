@@ -331,10 +331,20 @@ class CoreOpsMixin(object):
         if target_index is not None:
             result["target_index"] = int(target_index)
 
+        before_signature_counts = {}
+        for device in previous_devices:
+            signature = self._device_result_signature(device)
+            before_signature_counts[signature] = before_signature_counts.get(signature, 0) + 1
+
         new_device_index = None
         new_device = None
         for index, device in enumerate(devices_after):
-            if all(device is not previous_device for previous_device in previous_devices):
+            signature = self._device_result_signature(device)
+            remaining = before_signature_counts.get(signature, 0)
+            if remaining > 0:
+                before_signature_counts[signature] = remaining - 1
+                continue
+            if remaining == 0:
                 new_device_index = index
                 new_device = device
                 break
@@ -350,8 +360,27 @@ class CoreOpsMixin(object):
             result["device_index"] = new_device_index
             result["loaded_device_name"] = new_device.name
             result["class_name"] = new_device.class_name
+            if hasattr(self, "_device_is_plugin"):
+                result["is_plugin"] = bool(self._device_is_plugin(new_device))
+            if hasattr(self, "_device_plugin_flags"):
+                plugin_flags = self._device_plugin_flags(new_device)
+                result["is_vst"] = bool(plugin_flags.get("is_vst", False))
+                result["is_au"] = bool(plugin_flags.get("is_au", False))
 
         return result
+
+    def _device_result_signature(self, device):
+        class_display_name = ""
+        try:
+            class_display_name = str(getattr(device, "class_display_name", "") or "")
+        except Exception:
+            class_display_name = ""
+        return (
+            str(getattr(device, "name", "") or ""),
+            str(getattr(device, "class_name", "") or ""),
+            int(getattr(device, "type", -1) or -1),
+            class_display_name,
+        )
 
     def _load_browser_item_onto_track(
         self,

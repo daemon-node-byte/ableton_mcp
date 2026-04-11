@@ -32,8 +32,9 @@ For current runtime facts, use:
 ## Areas That Still Need Extra Caution
 
 - browser loading beyond the validated built-in instrument and drum-kit slice
+- third-party plugin behavior beyond the now-validated top-level native-device audit
 - take-lane workflows
-- plugin-window behavior
+- true plugin editor behavior beyond the now-confirmed `Device.View.is_collapsed` collapse/expand contract
 - automation and envelope editing
 - nested rack traversal edge cases
 - undo and rollback expectations for destructive actions

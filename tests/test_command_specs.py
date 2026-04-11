@@ -35,3 +35,11 @@ class CommandSpecTests(unittest.TestCase):
                 else:
                     method_locations[method_name] = location
         self.assertEqual({}, duplicates)
+
+    def test_device_audit_specs_match_lom_aligned_expectations(self):
+        self.assertEqual("confirmed", COMMAND_SPECS["toggle_device"].stability)
+        self.assertEqual("confirmed", COMMAND_SPECS["set_device_enabled"].stability)
+        self.assertEqual("confirmed", COMMAND_SPECS["move_device"].stability)
+        self.assertIn("Track.insert_device", COMMAND_SPECS["load_instrument_or_effect"].notes)
+        self.assertIn("track.devices ordering", COMMAND_SPECS["get_track_devices"].notes)
+        self.assertIn("excluded the mixer device", COMMAND_SPECS["get_track_devices"].notes)

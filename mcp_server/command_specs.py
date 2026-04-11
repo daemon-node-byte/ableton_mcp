@@ -140,6 +140,19 @@ FIRST_CLASS_MCP_COMMANDS = (
 )
 
 
+DEVICE_INDEX_NOTES = (
+    "Validated in Ableton Live 12.3.7 locally on 2026-04-11 on a disposable MIDI track loaded with "
+    "native devices. Top-level device_index follows the current Remote Script track.devices ordering; "
+    "on the validated Python Remote Script surface, track.devices excluded the mixer device."
+)
+DEVICE_ACTIVATOR_HELPER_NOTE = (
+    "Validated in Ableton Live 12.3.7 locally on 2026-04-11 as an activator-parameter helper on "
+    "native devices loaded onto a disposable MIDI track. The LOM documents Device.is_active as "
+    "read-only, so this command is confirmed only for the helper semantics, not as a universal "
+    "device-power setter."
+)
+
+
 _COMMAND_SPECS = [
     _spec("health_check", "health", result="{status, tempo, is_playing, track_count}", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09."),
 
@@ -266,24 +279,24 @@ _COMMAND_SPECS = [
     _spec("select_scene", "scene", required=("scene_index",), result="{selected_scene_index}", write=True, stability="likely-complete"),
     _spec("get_selected_scene", "scene", result="{index, name}", stability="likely-complete"),
 
-    _spec("get_track_devices", "device", required=("track_index",), result="{track_index, devices[]}", stability="likely-complete", exposed=True),
-    _spec("get_device_parameters", "device", required=("track_index", "device_index"), result="device parameter details", stability="likely-complete", exposed=True),
-    _spec("set_device_parameter", "device", required=("track_index", "device_index", "parameter_index", "value"), result="{parameter_index, name, value, display_value}", write=True, stability="likely-complete"),
-    _spec("set_device_parameter_by_name", "device", required=("track_index", "device_index", "name", "value"), result="{name, value, display_value}", write=True, stability="likely-complete", exposed=True),
-    _spec("get_device_parameter_by_name", "device", required=("track_index", "device_index", "name"), result="single parameter details", stability="likely-complete", exposed=True),
+    _spec("get_track_devices", "device", required=("track_index",), result="{track_index, devices[]}", stability="confirmed", exposed=True, notes=DEVICE_INDEX_NOTES),
+    _spec("get_device_parameters", "device", required=("track_index", "device_index"), result="device parameter details", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12.3.7 locally on 2026-04-11 for top-level native-device parameter inspection on a disposable MIDI track. {}".format(DEVICE_INDEX_NOTES)),
+    _spec("set_device_parameter", "device", required=("track_index", "device_index", "parameter_index", "value"), result="{parameter_index, name, value, display_value}", write=True, stability="confirmed", notes="Validated in Ableton Live 12.3.7 locally on 2026-04-11 for writable top-level native-device parameters on a disposable MIDI track."),
+    _spec("set_device_parameter_by_name", "device", required=("track_index", "device_index", "name", "value"), result="{name, value, display_value}", write=True, stability="confirmed", exposed=True, notes="Validated in Ableton Live 12.3.7 locally on 2026-04-11 for writable top-level native-device parameters by name on a disposable MIDI track."),
+    _spec("get_device_parameter_by_name", "device", required=("track_index", "device_index", "name"), result="single parameter details", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12.3.7 locally on 2026-04-11 against the same native-device parameter targets used for write/readback."),
     _spec("get_device_parameters_at_path", "device", required=("track_index", "device_path"), result="nested device parameter details", stability="confirmed", exposed=True, notes="Validated in Ableton Live 12.3+ locally on 2026-04-10 on nested built-in devices inside system-owned rack trees. Uses track-relative LOM-style device paths."),
     _spec("set_device_parameter_at_path", "device", required=("track_index", "device_path", "parameter_index", "value"), result="{device_path, parameter_index, name, value}", write=True, stability="confirmed", exposed=True, notes="Validated in Ableton Live 12.3+ locally on 2026-04-10 for nested built-in device tuning inside system-owned rack trees. Uses track-relative LOM-style device paths."),
     _spec("set_device_parameter_by_name_at_path", "device", required=("track_index", "device_path", "name", "value"), result="{device_path, parameter_index, name, value}", write=True, stability="confirmed", exposed=True, notes="Validated in Ableton Live 12.3+ locally on 2026-04-10 for nested built-in device tuning inside system-owned rack trees. Uses track-relative LOM-style device paths and resolves validated EQ Eight shorthand aliases."),
-    _spec("toggle_device", "device", required=("track_index", "device_index"), result="{is_active}", write=True, stability="partial"),
-    _spec("set_device_enabled", "device", required=("track_index", "device_index", "enabled"), result="{is_active}", write=True, stability="likely-complete"),
-    _spec("delete_device", "device", required=("track_index", "device_index"), result="{ok, deleted_index}", write=True, stability="likely-complete"),
-    _spec("move_device", "device", required=("track_index", "device_index", "new_index"), result="{ok, new_index}", write=True, stability="likely-complete"),
-    _spec("show_plugin_window", "device", required=("track_index", "device_index"), result="{ok, device_name, mode, stability}", write=True, stability="partial", notes="Best-effort device view expansion only."),
-    _spec("hide_plugin_window", "device", required=("track_index", "device_index"), result="{ok, device_name, mode, stability}", write=True, stability="partial", notes="Best-effort device view collapse only."),
-    _spec("load_instrument_or_effect", "device", required=("track_index",), optional=("device_name", "native_device_name", "target_index", "uri"), result="{ok, mode, device_count_before, device_count_after, ...}", write=True, stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 for built-in native instrument names, discovered built-in instrument URIs, and discovered built-in MIDI/audio effect URIs. Requires exactly one source. Third-party plugin URIs remain backlog work."),
-    _spec("get_device_class_name", "device", required=("track_index", "device_index"), result="{class_name, name}", stability="likely-complete"),
-    _spec("select_device", "device", required=("track_index", "device_index"), result="{ok, device_name}", write=True, stability="likely-complete"),
-    _spec("get_selected_device", "device", result="{selected, track_index, device_index, name, class_name}", stability="likely-complete"),
+    _spec("toggle_device", "device", required=("track_index", "device_index"), result="{is_active, enabled, parameter_name, mode, stability}", write=True, stability="confirmed", notes=DEVICE_ACTIVATOR_HELPER_NOTE),
+    _spec("set_device_enabled", "device", required=("track_index", "device_index", "enabled"), result="{is_active, enabled, parameter_name, mode, stability}", write=True, stability="confirmed", notes=DEVICE_ACTIVATOR_HELPER_NOTE),
+    _spec("delete_device", "device", required=("track_index", "device_index"), result="{ok, deleted_index}", write=True, stability="confirmed", notes="Validated in Ableton Live 12.3.7 locally on 2026-04-11 for top-level native-device deletion on a disposable MIDI track. {}".format(DEVICE_INDEX_NOTES)),
+    _spec("move_device", "device", required=("track_index", "device_index", "new_index"), result="{ok, new_index, requested_index, stability}", write=True, stability="confirmed", notes="Validated in Ableton Live 12.3.7 locally on 2026-04-11 for same-track reordering of top-level native audio effects on a disposable MIDI track. Uses Song.move_device(device, target, target position) on the validated Python surface. {}".format(DEVICE_INDEX_NOTES)),
+    _spec("show_plugin_window", "device", required=("track_index", "device_index"), result="{ok, device_name, mode, collapsed, stability}", write=True, stability="confirmed", notes="Validated in Ableton Live 12.3.7 locally on 2026-04-11 only for device-view expansion via Device.View.is_collapsed. This is not confirmed plugin editor window control."),
+    _spec("hide_plugin_window", "device", required=("track_index", "device_index"), result="{ok, device_name, mode, collapsed, stability}", write=True, stability="confirmed", notes="Validated in Ableton Live 12.3.7 locally on 2026-04-11 only for device-view collapse via Device.View.is_collapsed. This is not confirmed plugin editor window control."),
+    _spec("load_instrument_or_effect", "device", required=("track_index",), optional=("device_name", "native_device_name", "target_index", "uri"), result="{ok, mode, device_count_before, device_count_after, ...}", write=True, stability="confirmed", exposed=True, notes="Validated in Ableton Live 12 locally on 2026-04-09 for built-in native instrument names and discovered built-in instrument, MIDI-effect, and audio-effect URIs, then revalidated on 2026-04-11 for top-level native device insertion metadata during the device audit pass. Requires exactly one source. Native device_name/native_device_name insertion relies on Track.insert_device and is therefore limited to native Live devices; Max for Live devices and third-party plugin insertion remain backlog work."),
+    _spec("get_device_class_name", "device", required=("track_index", "device_index"), result="{class_name, name}", stability="confirmed", notes="Validated in Ableton Live 12.3.7 locally on 2026-04-11 for top-level native devices on a disposable MIDI track."),
+    _spec("select_device", "device", required=("track_index", "device_index"), result="{ok, device_name}", write=True, stability="confirmed", notes="Validated in Ableton Live 12.3.7 locally on 2026-04-11 against top-level native devices on a selected disposable MIDI track."),
+    _spec("get_selected_device", "device", result="{selected, track_index, device_index, name, class_name}", stability="confirmed", notes="Validated in Ableton Live 12.3.7 locally on 2026-04-11 using Song.View.selected_track plus Track.View.selected_device on a disposable MIDI track."),
 
     _spec("create_rack", "rack", required=("track_index", "rack_type", "name"), optional=("target_path",), result="{rack_id, rack_path, device_index, name, rack_type}", write=True, stability="confirmed", exposed=True, notes="Validated in Ableton Live 12.3+ locally on 2026-04-10 for native Instrument Rack and Audio Effect Rack creation on disposable tracks and nested chain targets. Registers system-owned racks in the project Memory Bank."),
     _spec("insert_rack_chain", "rack", required=("track_index", "rack_path", "name"), optional=("index",), result="{rack_path, chain_index, chain_path, name}", write=True, stability="confirmed", exposed=True, notes="Validated in Ableton Live 12.3+ locally on 2026-04-10 for system-owned Instrument Rack and Audio Effect Rack chains. Uses RackDevice.insert_chain() with track-relative LOM-style rack paths."),

@@ -18,6 +18,13 @@ Confirmed locally on `2026-04-10`:
 - rack, chain, and drum-rack inspection/mutation
 - Drum Rack note remap via `DrumChain.in_note` on the validated Live build
 
+Confirmed locally on `2026-04-11`:
+
+- top-level device enumeration, selection, parameter read/write, class lookup, deletion, and same-track reordering on native devices
+- activator-helper behavior for `toggle_device` and `set_device_enabled` on native devices
+- device-view collapse/expand behavior for `show_plugin_window` and `hide_plugin_window`
+- observed on the validated Python Remote Script surface that `track.devices` excluded the mixer device on a fresh disposable MIDI track
+
 For the exact validated commands, use [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md) and [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md).
 
 ## Next Priorities
@@ -80,18 +87,19 @@ Record:
 - whether take-lane creation has side effects
 - how take-lane clip enumeration behaves after comping and recording
 
-### 5. Plugin-window behavior
+### 5. Third-party plugin behavior beyond the current native-device audit
 
 Validate:
 
-- `show_plugin_window`
-- `hide_plugin_window`
+- `load_instrument_or_effect` with third-party plugin URIs if the browser exposes them
+- whether third-party plugin parameters remain stable enough for profile-style aliases after manual Configure
+- whether any safe, user-facing contract exists for actual plugin editor visibility beyond `Device.View.is_collapsed`
 
 Record:
 
-- whether these commands only affect device-chain collapse
-- whether any actual plugin editor visibility changes occur
-- whether the command names should be narrowed later
+- the exact plugin URIs and parameter surfaces tested
+- whether plugin parameters survive reopen and reselection
+- whether any true editor-window behavior is exposed or whether the current collapse/expand contract should remain the final one
 
 ### 6. Arrangement residuals
 

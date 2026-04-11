@@ -224,6 +224,7 @@ class BrowserLoadingContractTests(unittest.TestCase):
         self.assertEqual(0, result["device_count_before"])
         self.assertEqual(1, result["device_count_after"])
         self.assertEqual("Drift", result["loaded_device_name"])
+        self.assertFalse(result["is_plugin"])
 
     def test_load_instrument_or_effect_returns_device_metadata_for_uri_load(self):
         harness = BrowserDeviceHarness()
@@ -232,6 +233,7 @@ class BrowserLoadingContractTests(unittest.TestCase):
         self.assertEqual("query:Synths#Operator", result["uri"])
         self.assertEqual(1, result["device_count_after"])
         self.assertEqual("Operator", result["loaded_device_name"])
+        self.assertFalse(result["is_plugin"])
 
     def test_load_instrument_or_effect_supports_built_in_audio_effect_uris(self):
         harness = BrowserDeviceHarness()
