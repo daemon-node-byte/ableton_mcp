@@ -7,6 +7,8 @@ This doc is the operational shortlist for the next Live 12 validation runs.
 Confirmed locally on `2026-04-10`:
 
 - connectivity and session inspection
+- regular track mutation and selection
+- return-track inspection, return mixer mutation, and send control in a set with existing return tracks
 - Session View clip and MIDI note round trips
 - Arrangement View MIDI/audio clip creation, edit, delete, and duplication flows
 - browser discovery plus built-in instrument, drum-kit, MIDI-effect, and audio-effect loading
@@ -34,7 +36,20 @@ Record:
 - whether the limitation is API-level or implementation-level
 - what remains safe to expose as inspection-only versus system-owned authoring
 
-### 2. Extended third-party browser and device loading
+### 2. Positive fold / unfold validation on a real group track
+
+Validate:
+
+- `fold_track`
+- `unfold_track`
+
+Record:
+
+- the exact foldable group track used
+- original and restored `fold_state`
+- whether any selection or visibility side effects occur in the current Live build
+
+### 3. Extended third-party browser and device loading
 
 Validate:
 
@@ -49,7 +64,7 @@ Record:
 - whether third-party plugin URIs are loadable or need separate handling
 - any platform-specific issues
 
-### 3. Take lanes
+### 4. Take lanes
 
 Validate:
 
@@ -65,7 +80,7 @@ Record:
 - whether take-lane creation has side effects
 - how take-lane clip enumeration behaves after comping and recording
 
-### 4. Plugin-window behavior
+### 5. Plugin-window behavior
 
 Validate:
 
@@ -78,7 +93,7 @@ Record:
 - whether any actual plugin editor visibility changes occur
 - whether the command names should be narrowed later
 
-### 5. Arrangement residuals
+### 6. Arrangement residuals
 
 Validate:
 

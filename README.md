@@ -28,6 +28,8 @@ AbletonMCP is a Python-first MCP server for Ableton Live 12 built around a custo
 Validated locally in Ableton Live 12 on `2026-04-10`:
 
 - core connectivity and session introspection
+- regular track mutation and selection
+- return-track inspection, return mixer mutation, and send control in a set with existing return tracks
 - Session View clip and MIDI note round trips
 - Arrangement View MIDI/audio clip creation, edit, delete, and duplication flows
 - browser discovery plus built-in instrument, drum-kit, MIDI-effect, and audio-effect loading
@@ -38,6 +40,7 @@ Validated locally in Ableton Live 12 on `2026-04-10`:
 
 Still in the validation backlog:
 
+- positive fold/unfold validation on a real group track
 - take lane workflows
 - plugin-window behavior
 - third-party or broader browser/effect loading beyond the validated built-in slice
@@ -67,6 +70,7 @@ First-class MCP tools currently cover:
 
 - health, transport, and session inspection
 - basic track inspection and creation
+- first-class track mutation, send/return control, and normal/return/master selection
 - Session View clip and note workflows
 - Arrangement View clip creation and editing
 - device inspection, named parameter access, and nested rack-device path tuning

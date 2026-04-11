@@ -6,6 +6,93 @@ from __future__ import absolute_import, print_function, unicode_literals
 class TrackOpsMixin(object):
     """Track and mixer commands."""
 
+    def _get_return_track(self, return_index):
+        return_tracks = self.song().return_tracks
+        idx = int(return_index)
+        if idx < 0 or idx >= len(return_tracks):
+            raise ValueError("Return track index {} out of range".format(idx))
+        return return_tracks[idx]
+
+    def _parse_bool_param(self, value, field_name):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        normalized = str(value).strip().lower()
+        if normalized in ("1", "true", "yes", "on"):
+            return True
+        if normalized in ("0", "false", "no", "off", ""):
+            return False
+        raise ValueError("{} must be a boolean".format(field_name))
+
+    def _require_armable_track(self, track, track_index):
+        idx = int(track_index)
+        if hasattr(track, "can_be_armed") and not bool(track.can_be_armed):
+            raise ValueError("Track index {} cannot be armed".format(idx))
+        if not hasattr(track, "arm"):
+            raise ValueError("Track index {} cannot be armed".format(idx))
+
+    def _require_foldable_track(self, track, track_index):
+        idx = int(track_index)
+        if not getattr(track, "is_foldable", False):
+            raise ValueError("Track index {} is not foldable".format(idx))
+        if not hasattr(track, "fold_state"):
+            raise ValueError("Track index {} is not foldable".format(idx))
+
+    def _selected_track_payload(self, selected):
+        song = self.song()
+        for index, track in enumerate(song.tracks):
+            if track == selected:
+                return {
+                    "selection_type": "track",
+                    "name": track.name,
+                    "index": index,
+                    "track_index": index,
+                    "return_index": None,
+                }
+
+        for index, track in enumerate(song.return_tracks):
+            if track == selected:
+                return {
+                    "selection_type": "return_track",
+                    "name": track.name,
+                    "index": -1,
+                    "track_index": None,
+                    "return_index": index,
+                }
+
+        master_track = getattr(song, "master_track", None)
+        if master_track is not None and master_track == selected:
+            return {
+                "selection_type": "master_track",
+                "name": master_track.name,
+                "index": -1,
+                "track_index": None,
+                "return_index": None,
+            }
+
+        return {
+            "selection_type": "unknown",
+            "name": selected.name if selected is not None and hasattr(selected, "name") else "",
+            "index": -1,
+            "track_index": None,
+            "return_index": None,
+        }
+
+    def _resolve_selected_track_target(self, params):
+        has_track_index = params.get("track_index") is not None
+        has_return_index = params.get("return_index") is not None
+        has_master = self._parse_bool_param(params.get("master", False), "master")
+        selector_count = int(has_track_index) + int(has_return_index) + int(has_master)
+        if selector_count != 1:
+            raise ValueError("select_track requires exactly one of track_index, return_index, or master=True")
+
+        if has_track_index:
+            return self._get_track(params["track_index"])
+        if has_return_index:
+            return self._get_return_track(params["return_index"])
+        return self.song().master_track
+
     def _get_track_info(self, params):
         track = self._get_track(params["track_index"])
         devices = []
@@ -139,6 +226,7 @@ class TrackOpsMixin(object):
 
     def _set_track_arm(self, params):
         track = self._get_track(params["track_index"])
+        self._require_armable_track(track, params["track_index"])
         track.arm = bool(params["arm"])
         return {"arm": track.arm}
 
@@ -161,13 +249,15 @@ class TrackOpsMixin(object):
 
     def _fold_track(self, params):
         track = self._get_track(params["track_index"])
+        self._require_foldable_track(track, params["track_index"])
         track.fold_state = True
-        return {"fold_state": True}
+        return {"fold_state": bool(track.fold_state)}
 
     def _unfold_track(self, params):
         track = self._get_track(params["track_index"])
+        self._require_foldable_track(track, params["track_index"])
         track.fold_state = False
-        return {"fold_state": False}
+        return {"fold_state": bool(track.fold_state)}
 
     def _unarm_all(self):
         for track in self.song().tracks:
@@ -224,10 +314,7 @@ class TrackOpsMixin(object):
 
     def _get_return_track_info(self, params):
         return_index = int(params["return_index"])
-        return_tracks = self.song().return_tracks
-        if return_index < 0 or return_index >= len(return_tracks):
-            raise ValueError("Return track index {} out of range".format(return_index))
-        track = return_tracks[return_index]
+        track = self._get_return_track(return_index)
         return {
             "index": return_index,
             "name": track.name,
@@ -239,13 +326,13 @@ class TrackOpsMixin(object):
         }
 
     def _set_return_volume(self, params):
-        track = self.song().return_tracks[int(params["return_index"])]
+        track = self._get_return_track(params["return_index"])
         value = max(0.0, min(1.0, float(params["volume"])))
         track.mixer_device.volume.value = value
         return {"volume": track.mixer_device.volume.value}
 
     def _set_return_pan(self, params):
-        track = self.song().return_tracks[int(params["return_index"])]
+        track = self._get_return_track(params["return_index"])
         value = max(-1.0, min(1.0, float(params["pan"])))
         track.mixer_device.panning.value = value
         return {"pan": track.mixer_device.panning.value}
@@ -285,17 +372,16 @@ class TrackOpsMixin(object):
         }
 
     def _select_track(self, params):
-        track = self._get_track(params["track_index"])
+        track = self._resolve_selected_track_target(params)
         self.song().view.selected_track = track
-        return {"selected_track_index": int(params["track_index"])}
+        selected_payload = self._selected_track_payload(track)
+        selected_payload["selected_track_index"] = (
+            selected_payload["track_index"] if selected_payload["track_index"] is not None else -1
+        )
+        return selected_payload
 
     def _get_selected_track(self):
-        song = self.song()
-        selected = song.view.selected_track
-        for index, track in enumerate(song.tracks):
-            if track == selected:
-                return {"index": index, "name": track.name}
-        return {"index": -1, "name": selected.name if selected else ""}
+        return self._selected_track_payload(self.song().view.selected_track)
 
     def _get_master_info(self):
         master = self.song().master_track

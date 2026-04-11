@@ -40,6 +40,125 @@ class ServerRegistrationTests(unittest.TestCase):
         invoke_mock.assert_called_once_with("get_session_path", {})
         self.assertEqual({"path": "/tmp/Test.als"}, result)
 
+    def test_track_wrappers_forward_expected_params(self):
+        cases = (
+            (
+                "set_track_name",
+                lambda: ableton_server.set_track_name(2, "Bass"),
+                "set_track_name",
+                {"track_index": 2, "name": "Bass"},
+            ),
+            (
+                "set_track_color",
+                lambda: ableton_server.set_track_color(2, 16711935),
+                "set_track_color",
+                {"track_index": 2, "color": 16711935},
+            ),
+            (
+                "set_track_volume",
+                lambda: ableton_server.set_track_volume(2, 0.65),
+                "set_track_volume",
+                {"track_index": 2, "volume": 0.65},
+            ),
+            (
+                "set_track_pan",
+                lambda: ableton_server.set_track_pan(2, -0.3),
+                "set_track_pan",
+                {"track_index": 2, "pan": -0.3},
+            ),
+            (
+                "set_track_mute",
+                lambda: ableton_server.set_track_mute(2, True),
+                "set_track_mute",
+                {"track_index": 2, "mute": True},
+            ),
+            (
+                "set_track_solo",
+                lambda: ableton_server.set_track_solo(2, True),
+                "set_track_solo",
+                {"track_index": 2, "solo": True},
+            ),
+            (
+                "set_track_arm",
+                lambda: ableton_server.set_track_arm(2, True),
+                "set_track_arm",
+                {"track_index": 2, "arm": True},
+            ),
+            (
+                "fold_track",
+                lambda: ableton_server.fold_track(2),
+                "fold_track",
+                {"track_index": 2},
+            ),
+            (
+                "unfold_track",
+                lambda: ableton_server.unfold_track(2),
+                "unfold_track",
+                {"track_index": 2},
+            ),
+            (
+                "set_send_level",
+                lambda: ableton_server.set_send_level(2, 1, 0.4),
+                "set_send_level",
+                {"track_index": 2, "send_index": 1, "level": 0.4},
+            ),
+            (
+                "get_return_tracks",
+                lambda: ableton_server.get_return_tracks(),
+                "get_return_tracks",
+                {},
+            ),
+            (
+                "get_return_track_info",
+                lambda: ableton_server.get_return_track_info(1),
+                "get_return_track_info",
+                {"return_index": 1},
+            ),
+            (
+                "set_return_volume",
+                lambda: ableton_server.set_return_volume(1, 0.7),
+                "set_return_volume",
+                {"return_index": 1, "volume": 0.7},
+            ),
+            (
+                "set_return_pan",
+                lambda: ableton_server.set_return_pan(1, -0.2),
+                "set_return_pan",
+                {"return_index": 1, "pan": -0.2},
+            ),
+            (
+                "select_track:track",
+                lambda: ableton_server.select_track(track_index=2),
+                "select_track",
+                {"track_index": 2},
+            ),
+            (
+                "select_track:return",
+                lambda: ableton_server.select_track(return_index=1),
+                "select_track",
+                {"return_index": 1},
+            ),
+            (
+                "select_track:master",
+                lambda: ableton_server.select_track(master=True),
+                "select_track",
+                {"master": True},
+            ),
+            (
+                "get_selected_track",
+                lambda: ableton_server.get_selected_track(),
+                "get_selected_track",
+                {},
+            ),
+        )
+
+        for label, caller, command_name, expected_params in cases:
+            with self.subTest(wrapper=label):
+                with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
+                    result = caller()
+                invoke_mock.assert_called_once_with(command_name, expected_params)
+                self.assertEqual({"ok": True}, result)
+
     def test_create_arrangement_audio_clip_wrapper_forwards_expected_params(self):
         with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
             result = ableton_server.create_arrangement_audio_clip(2, "/tmp/test.wav", 64.0)

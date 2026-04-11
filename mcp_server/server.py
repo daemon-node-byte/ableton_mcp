@@ -101,6 +101,100 @@ def create_audio_track(index: Optional[int] = None):
     return _invoke("create_audio_track", params)
 
 
+@mcp.tool(description=get_command_spec("set_track_name").tool_description)
+def set_track_name(track_index: int, name: str):
+    return _invoke("set_track_name", {"track_index": track_index, "name": name})
+
+
+@mcp.tool(description=get_command_spec("set_track_color").tool_description)
+def set_track_color(track_index: int, color: int):
+    return _invoke("set_track_color", {"track_index": track_index, "color": color})
+
+
+@mcp.tool(description=get_command_spec("set_track_volume").tool_description)
+def set_track_volume(track_index: int, volume: float):
+    return _invoke("set_track_volume", {"track_index": track_index, "volume": volume})
+
+
+@mcp.tool(description=get_command_spec("set_track_pan").tool_description)
+def set_track_pan(track_index: int, pan: float):
+    return _invoke("set_track_pan", {"track_index": track_index, "pan": pan})
+
+
+@mcp.tool(description=get_command_spec("set_track_mute").tool_description)
+def set_track_mute(track_index: int, mute: bool):
+    return _invoke("set_track_mute", {"track_index": track_index, "mute": mute})
+
+
+@mcp.tool(description=get_command_spec("set_track_solo").tool_description)
+def set_track_solo(track_index: int, solo: bool):
+    return _invoke("set_track_solo", {"track_index": track_index, "solo": solo})
+
+
+@mcp.tool(description=get_command_spec("set_track_arm").tool_description)
+def set_track_arm(track_index: int, arm: bool):
+    return _invoke("set_track_arm", {"track_index": track_index, "arm": arm})
+
+
+@mcp.tool(description=get_command_spec("fold_track").tool_description)
+def fold_track(track_index: int):
+    return _invoke("fold_track", {"track_index": track_index})
+
+
+@mcp.tool(description=get_command_spec("unfold_track").tool_description)
+def unfold_track(track_index: int):
+    return _invoke("unfold_track", {"track_index": track_index})
+
+
+@mcp.tool(description=get_command_spec("set_send_level").tool_description)
+def set_send_level(track_index: int, send_index: int, level: float):
+    return _invoke(
+        "set_send_level",
+        {"track_index": track_index, "send_index": send_index, "level": level},
+    )
+
+
+@mcp.tool(description=get_command_spec("get_return_tracks").tool_description)
+def get_return_tracks():
+    return _invoke("get_return_tracks", {})
+
+
+@mcp.tool(description=get_command_spec("get_return_track_info").tool_description)
+def get_return_track_info(return_index: int):
+    return _invoke("get_return_track_info", {"return_index": return_index})
+
+
+@mcp.tool(description=get_command_spec("set_return_volume").tool_description)
+def set_return_volume(return_index: int, volume: float):
+    return _invoke("set_return_volume", {"return_index": return_index, "volume": volume})
+
+
+@mcp.tool(description=get_command_spec("set_return_pan").tool_description)
+def set_return_pan(return_index: int, pan: float):
+    return _invoke("set_return_pan", {"return_index": return_index, "pan": pan})
+
+
+@mcp.tool(description=get_command_spec("select_track").tool_description)
+def select_track(
+    track_index: Optional[int] = None,
+    return_index: Optional[int] = None,
+    master: bool = False,
+):
+    params = {}
+    if track_index is not None:
+        params["track_index"] = track_index
+    if return_index is not None:
+        params["return_index"] = return_index
+    if master:
+        params["master"] = True
+    return _invoke("select_track", params)
+
+
+@mcp.tool(description=get_command_spec("get_selected_track").tool_description)
+def get_selected_track():
+    return _invoke("get_selected_track", {})
+
+
 @mcp.tool(description=get_command_spec("create_clip").tool_description)
 def create_clip(track_index: int, slot_index: int, length: float = 4.0):
     return _invoke(

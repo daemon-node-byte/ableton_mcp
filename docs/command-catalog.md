@@ -21,6 +21,8 @@ Use [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_serve
 Direct Live validation currently covers:
 
 - connectivity and session inspection
+- regular track mutation and selection
+- return-track inspection, return mixer mutation, and send control in a set with existing return tracks
 - Session View clip and note round trips
 - Arrangement View clip creation, edit, delete, import, and duplication
 - browser discovery and validated built-in loading
@@ -96,13 +98,13 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 | `create_return_track` | Create return track | plausible |
 | `delete_track` | Delete track | confirmed |
 | `duplicate_track` | Duplicate track | plausible |
-| `set_track_name` | Rename track | plausible |
-| `set_track_color` | Set track color | plausible |
-| `set_track_volume` | Set volume | plausible |
-| `set_track_pan` | Set pan | plausible |
-| `set_track_mute` | Set mute | plausible |
-| `set_track_solo` | Set solo | plausible |
-| `set_track_arm` | Set arm | plausible |
+| `set_track_name` | Rename track | confirmed |
+| `set_track_color` | Set track color | confirmed |
+| `set_track_volume` | Set volume | confirmed |
+| `set_track_pan` | Set pan | confirmed |
+| `set_track_mute` | Set mute | confirmed |
+| `set_track_solo` | Set solo | confirmed |
+| `set_track_arm` | Set arm | confirmed |
 | `set_track_monitoring` | Set monitoring mode | plausible |
 | `freeze_track` | Freeze track | needs audit |
 | `flatten_track` | Flatten track | needs audit |
@@ -112,17 +114,26 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 | `unsolo_all` | Unsolo all tracks | plausible |
 | `unmute_all` | Unmute all tracks | plausible |
 | `set_track_delay` | Set track delay | needs audit |
-| `set_send_level` | Set send level | plausible |
-| `get_return_tracks` | List return tracks | plausible |
-| `get_return_track_info` | Inspect one return track | plausible |
-| `set_return_volume` | Set return volume | plausible |
-| `set_return_pan` | Set return pan | plausible |
+| `set_send_level` | Set send level | confirmed |
+| `get_return_tracks` | List return tracks | confirmed |
+| `get_return_track_info` | Inspect one return track | confirmed |
+| `set_return_volume` | Set return volume | confirmed |
+| `set_return_pan` | Set return pan | confirmed |
 | `set_track_input_routing` | Set input routing type | needs audit |
 | `set_track_output_routing` | Set output routing type | needs audit |
 | `get_track_input_routing` | Read available/current input routing | plausible |
 | `get_track_output_routing` | Read available/current output routing | plausible |
-| `select_track` | Select track in Live view | plausible |
-| `get_selected_track` | Return selected track | plausible |
+| `select_track` | Select normal, return, or master track in Live view | confirmed |
+| `get_selected_track` | Return the selected normal, return, or master track | confirmed |
+
+### Notes
+
+- `set_track_color` is validated against the applied/read-back color because the LOM maps requested RGB values to the nearest track color chooser value.
+- `set_track_solo` is confirmed as a target-state write only; the LOM does not guarantee exclusive-solo side effects.
+- `set_track_arm` now raises a stable error when the target cannot be armed.
+- `select_track` requires exactly one of `track_index`, `return_index`, or `master=True`.
+- `get_selected_track` now returns `selection_type`, `name`, `index`, `track_index`, and `return_index` so callers can distinguish regular-track, return-track, and master-track selections.
+- `fold_track` and `unfold_track` now fail cleanly on non-foldable tracks, but positive round-trip validation still needs a real foldable group track in the current set.
 
 ## 4. Master / cue / meters
 

@@ -121,6 +121,8 @@ On Linux, add `--add-host=host.docker.internal:host-gateway` to the Docker args.
 Direct Live validation on `2026-04-10` currently covers:
 
 - connectivity and session inspection
+- regular track mutation and selection
+- return-track inspection, return mixer mutation, and send control in a set with existing return tracks
 - Session View clip creation, note write, note read, and cleanup
 - Arrangement View MIDI/audio clip creation, resize, move, delete, and duplication
 - browser discovery and validated built-in loading for instruments, drum kits, MIDI effects, and audio effects
@@ -166,11 +168,22 @@ System-owned rack automation batch:
 uv run --python 3.11 python scripts/validate_system_owned_racks_batch.py
 ```
 
+Track control batch:
+
+```bash
+uv run --python 3.11 python scripts/validate_track_controls_batch.py
+```
+
 ## 8. Important Contract Notes
 
 - `create_arrangement_audio_clip` requires an absolute existing `file_path`
 - `delete_arrangement_clip`, `resize_arrangement_clip`, and `move_arrangement_clip` require exactly one selector: `clip_index` or `start_time`
 - `move_arrangement_clip` is currently MIDI-only
+- `select_track` requires exactly one of `track_index`, `return_index`, or `master=True`
+- `get_selected_track` returns `selection_type`, `name`, `index`, `track_index`, and `return_index`
+- `set_track_color` should be validated against the applied/read-back color, not the raw requested RGB value, because Live maps track colors to the nearest chooser entry
+- `set_track_arm` raises a stable error when the target cannot be armed
+- `fold_track` and `unfold_track` raise stable errors for non-foldable tracks; positive confirmation still requires an existing foldable group track in the current set
 - `get_browser_tree`, `get_browser_items_at_path`, and `search_browser` share the normalized top-level category set:
   `all`, `instruments`, `audio_effects`, `midi_effects`, `drums`, `sounds`, `samples`, `packs`, `user_library`
 - `search_browser` requires a non-empty query
@@ -178,6 +191,7 @@ uv run --python 3.11 python scripts/validate_system_owned_racks_batch.py
 - `load_instrument_or_effect` only accepts `target_index` for native insertion and requires `target_index >= 0`
 - `load_drum_kit` requires a loadable drum-kit preset URI and rejects the generic `Drum Rack` device entry
 - generic `Instrument Rack` and `Audio Effect Rack` device entries may load as empty shells with zero chains in the current Live library
+- `set_send_level`, `get_return_tracks`, `get_return_track_info`, `set_return_volume`, and `set_return_pan` are confirmed in sets that already contain at least one return track
 - system-owned rack addressing uses track-relative LOM-style paths such as `devices 0`, `devices 0 chains 1`, and `devices 0 chains 1 devices 2`
 - `create_rack`, `insert_rack_chain`, `insert_device_in_chain`, `apply_rack_blueprint`, `write_memory_bank`, and `refresh_rack_memory_entry` require a saved Live Set when they need project-root Memory Bank persistence
 - shorthand native device names such as `Eq8` and `AutoFilter` are normalized to the validated Live device names before insertion
