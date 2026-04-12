@@ -118,7 +118,7 @@ On Linux, add `--add-host=host.docker.internal:host-gateway` to the Docker args.
 
 ## 6. Current Verified Scope
 
-Direct Live validation on `2026-04-10` currently covers:
+Direct Live validation through `2026-04-12` currently covers:
 
 - connectivity and session inspection
 - regular track mutation and selection
@@ -127,7 +127,10 @@ Direct Live validation on `2026-04-10` currently covers:
 - Arrangement View MIDI/audio clip creation, resize, move, delete, and duplication
 - browser discovery and validated built-in loading for instruments, drum kits, MIDI effects, and audio effects
 - top-level device inspection, selection, parameter read/write, activator-helper enable/disable, same-track reordering, deletion, and device-view collapse/expand on native devices
+- positive `fold_track` / `unfold_track` round-trip on foldable group track `5-Group`, with the original `fold_state` restored during cleanup
 - system-owned Instrument Rack and Audio Effect Rack creation, chain insertion, built-in device insertion, and recursive structure readback
+- exposed rack macro value read/write on a validated system-owned rack, plus stable rejection of native macro-authoring directives
+- direct live-vs-Memory Bank comparison on an imported non-system-owned rack target (`808 Selector Rack.adg`) before and after `refresh_rack_memory_entry`
 - nested device parameter read/write inside rack trees through track-relative LOM-style paths
 - project-root Memory Bank reads and writes for saved Live Sets
 - blueprint-driven rack creation with stable rejection of unsupported native macro-mapping directives
@@ -181,6 +184,22 @@ Device audit batch:
 uv run --python 3.11 python scripts/validate_device_audit_batch.py
 ```
 
+Macro and user-rack audit batch:
+
+```bash
+uv run --python 3.11 python scripts/validate_macro_and_user_rack_batch.py
+```
+
+Full user-rack pass with a manual target:
+
+```bash
+uv run --python 3.11 python scripts/validate_macro_and_user_rack_batch.py \
+  --user-rack-track-index <track-index> \
+  --user-rack-device-index <device-index>
+```
+
+The `2026-04-12` imported-rack comparison used browser-loaded preset `808 Selector Rack.adg` as the manual target and confirmed the expected pre-import vs post-import semantics.
+
 ## 8. Important Contract Notes
 
 - `create_arrangement_audio_clip` requires an absolute existing `file_path`
@@ -190,7 +209,8 @@ uv run --python 3.11 python scripts/validate_device_audit_batch.py
 - `get_selected_track` returns `selection_type`, `name`, `index`, `track_index`, and `return_index`
 - `set_track_color` should be validated against the applied/read-back color, not the raw requested RGB value, because Live maps track colors to the nearest chooser entry
 - `set_track_arm` raises a stable error when the target cannot be armed
-- `fold_track` and `unfold_track` raise stable errors for non-foldable tracks; positive confirmation still requires an existing foldable group track in the current set
+- `fold_track` and `unfold_track` are confirmed on the validated Live 12.3.7 set for foldable group track `5-Group`; they still raise stable errors for non-foldable tracks
+- the current Python Remote Script surface did not expose child-track `is_visible` readback during the fold pass, so confirmation rests on `fold_state` round-trip plus grouped-child discovery
 - `get_browser_tree`, `get_browser_items_at_path`, and `search_browser` share the normalized top-level category set:
   `all`, `instruments`, `audio_effects`, `midi_effects`, `drums`, `sounds`, `samples`, `packs`, `user_library`
 - `search_browser` requires a non-empty query
@@ -208,6 +228,9 @@ uv run --python 3.11 python scripts/validate_device_audit_batch.py
 - `create_rack`, `insert_rack_chain`, `insert_device_in_chain`, `apply_rack_blueprint`, `write_memory_bank`, and `refresh_rack_memory_entry` require a saved Live Set when they need project-root Memory Bank persistence
 - shorthand native device names such as `Eq8` and `AutoFilter` are normalized to the validated Live device names before insertion
 - EQ Eight shorthand parameter names such as `Gain A`, `Frequency A`, and `Q A` are normalized to the validated Live parameter names during nested rack tuning
+- `get_rack_macros` and `set_rack_macro` are confirmed only for already-exposed macros
+- the LOM-backed contract for this repo treats native macro-to-parameter authoring and macro-to-macro authoring as explicitly unsupported
+- imported/user-authored racks are directly validated for live structure and already-exposed macro inspection before import, but authoritative repo-level semantic metadata still begins only after `refresh_rack_memory_entry`
 - `apply_rack_blueprint` rejects `macro_mappings`, `macro_to_macro_mappings`, and similar native macro-authoring requests with a stable unsupported error in this pass
 - top-level Drum Racks expose `drum_pads`; inner Drum Racks return zero pad entries
 - `DrumPad.note` is treated as read-only

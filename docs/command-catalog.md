@@ -28,9 +28,12 @@ Direct Live validation currently covers:
 - browser discovery and validated built-in loading
 - built-in MIDI-effect and audio-effect loading
 - top-level device inspection, selection, parameter read/write, activator-helper enable/disable, same-track reordering, deletion, and device-view collapse/expand on native devices
+- positive `fold_track` / `unfold_track` round-trip on a real foldable group track
 - system-owned Instrument Rack and Audio Effect Rack creation, chain insertion, nested device insertion, and recursive structure readback
+- exposed rack macro value read/write on a validated system-owned rack plus stable rejection of native macro-authoring directives
+- direct live-vs-Memory Bank comparison on an imported non-system-owned rack target (`808 Selector Rack.adg`) before and after `refresh_rack_memory_entry`
 - nested rack-device parameter read/write via track-relative LOM-style paths
-- project-root Memory Bank persistence for system-owned racks in saved Live Sets
+- project-root Memory Bank persistence for system-owned and imported racks in saved Live Sets
 - rack, chain, and drum-rack inspection/mutation
 
 For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md).
@@ -109,8 +112,8 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 | `set_track_monitoring` | Set monitoring mode | plausible |
 | `freeze_track` | Freeze track | needs audit |
 | `flatten_track` | Flatten track | needs audit |
-| `fold_track` | Fold group/foldable track | plausible |
-| `unfold_track` | Unfold group/foldable track | plausible |
+| `fold_track` | Fold group/foldable track | confirmed |
+| `unfold_track` | Unfold group/foldable track | confirmed |
 | `unarm_all` | Unarm all armable tracks | plausible |
 | `unsolo_all` | Unsolo all tracks | plausible |
 | `unmute_all` | Unmute all tracks | plausible |
@@ -134,7 +137,8 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 - `set_track_arm` now raises a stable error when the target cannot be armed.
 - `select_track` requires exactly one of `track_index`, `return_index`, or `master=True`.
 - `get_selected_track` now returns `selection_type`, `name`, `index`, `track_index`, and `return_index` so callers can distinguish regular-track, return-track, and master-track selections.
-- `fold_track` and `unfold_track` now fail cleanly on non-foldable tracks, but positive round-trip validation still needs a real foldable group track in the current set.
+- `fold_track` and `unfold_track` are confirmed on the current Live 12.3.7 set using foldable group track `5-Group`, with the original `fold_state` restored during cleanup.
+- during that run, the selection stayed on the pre-existing return-track target and the current Python Remote Script surface did not expose child-track `is_visible` readback, so confirmation rests on `fold_state` round-trip plus grouped-child discovery rather than direct visibility assertions.
 
 ## 4. Master / cue / meters
 
@@ -274,7 +278,9 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 - system-owned Instrument Rack and Audio Effect Rack authoring is now directly validated in Live 12.3+ using native rack insertion plus chain/device creation.
 - `get_rack_structure` returns track-relative LOM-style paths for racks, chains, devices, and return chains so later tuning calls can reuse them directly.
 - `apply_rack_blueprint` supports deterministic built-in device graphs and rejects native macro-mapping directives with a stable unsupported error.
-- native macro value read/write is confirmed only for already-exposed rack macros. Native macro-to-parameter authoring and macro-to-macro authoring are still out of scope.
+- native macro value read/write is confirmed only for already-exposed rack macros.
+- the LOM-backed contract for this repo now treats native macro-to-parameter authoring and macro-to-macro authoring as explicitly unsupported, not merely unimplemented.
+- imported/user-authored racks are validated for direct live structure and already-exposed macro inspection before import, but repo-level semantic metadata is only considered authoritative after `refresh_rack_memory_entry`.
 
 ## 10. Drum rack
 
@@ -308,6 +314,7 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 - the Memory Bank lives under `.ableton-mcp/memory` at the saved Ableton project root.
 - Memory Bank writes require a saved Live Set because the project root is derived from `Song.file_path`.
 - system-owned rack entries store rack identity, blueprint provenance, recursive structure, current macro snapshot, and explicit notes when native macro mappings are unsupported or unknown.
+- `refresh_rack_memory_entry` was revalidated on `2026-04-12` against imported rack preset `808 Selector Rack.adg` and remains the current path for importing a non-system-owned rack into authoritative Memory Bank metadata.
 
 ## 12. Browser
 

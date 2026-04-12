@@ -24,39 +24,21 @@ Confirmed locally on `2026-04-11`:
 - activator-helper behavior for `toggle_device` and `set_device_enabled` on native devices
 - device-view collapse/expand behavior for `show_plugin_window` and `hide_plugin_window`
 - observed on the validated Python Remote Script surface that `track.devices` excluded the mixer device on a fresh disposable MIDI track
+- positive `fold_track` / `unfold_track` round-trip on foldable group track `5-Group`, with original `fold_state` restored during cleanup
+- exposed rack macro value read/write on a validated system-owned rack, plus stable rejection of native macro-authoring directives
+- LOM-backed contract decision that native macro-to-parameter authoring and macro-to-macro authoring remain explicitly unsupported
+
+Confirmed locally on `2026-04-12`:
+
+- direct live-vs-Memory Bank comparison on an imported non-system-owned rack target using `scripts/validate_macro_and_user_rack_batch.py`
+- browser-loaded preset `808 Selector Rack.adg` was inspected via `get_rack_structure` and `get_rack_macros`, then imported with `refresh_rack_memory_entry` and re-read through `get_system_owned_racks`
+- validated repo guidance that live structure and already-exposed macros are directly inspectable before import, while authoritative repo-level semantic metadata still begins at explicit Memory Bank import
 
 For the exact validated commands, use [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md) and [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md).
 
 ## Next Priorities
 
-### 1. Native macro authoring and user-rack semantics
-
-Validate and scope separately:
-
-- whether any documented LOM path exists for authoring native macro-to-parameter mappings
-- whether macro-to-macro authoring is possible or should remain explicitly unsupported
-- whether imported user-authored racks can be given trustworthy semantic metadata without manual Memory Bank import
-
-Record:
-
-- the exact LOM objects or missing APIs involved
-- whether the limitation is API-level or implementation-level
-- what remains safe to expose as inspection-only versus system-owned authoring
-
-### 2. Positive fold / unfold validation on a real group track
-
-Validate:
-
-- `fold_track`
-- `unfold_track`
-
-Record:
-
-- the exact foldable group track used
-- original and restored `fold_state`
-- whether any selection or visibility side effects occur in the current Live build
-
-### 3. Extended third-party browser and device loading
+### 1. Extended third-party browser and device loading
 
 Validate:
 
@@ -71,7 +53,7 @@ Record:
 - whether third-party plugin URIs are loadable or need separate handling
 - any platform-specific issues
 
-### 4. Take lanes
+### 2. Take lanes
 
 Validate:
 
@@ -87,7 +69,7 @@ Record:
 - whether take-lane creation has side effects
 - how take-lane clip enumeration behaves after comping and recording
 
-### 5. Third-party plugin behavior beyond the current native-device audit
+### 3. Third-party plugin behavior beyond the current native-device audit
 
 Validate:
 
@@ -101,7 +83,7 @@ Record:
 - whether plugin parameters survive reopen and reselection
 - whether any true editor-window behavior is exposed or whether the current collapse/expand contract should remain the final one
 
-### 6. Arrangement residuals
+### 4. Arrangement residuals
 
 Validate:
 

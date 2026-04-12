@@ -152,6 +152,7 @@ class TrackOpsMixin(object):
             result["is_foldable"] = track.is_foldable
             result["is_grouped"] = track.is_grouped
             result["fold_state"] = track.fold_state
+            result["is_visible"] = track.is_visible
         except Exception:
             pass
         try:

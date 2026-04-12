@@ -43,3 +43,13 @@ class CommandSpecTests(unittest.TestCase):
         self.assertIn("Track.insert_device", COMMAND_SPECS["load_instrument_or_effect"].notes)
         self.assertIn("track.devices ordering", COMMAND_SPECS["get_track_devices"].notes)
         self.assertIn("excluded the mixer device", COMMAND_SPECS["get_track_devices"].notes)
+
+    def test_fold_and_rack_specs_match_current_validation_contracts(self):
+        self.assertEqual("confirmed", COMMAND_SPECS["fold_track"].stability)
+        self.assertEqual("confirmed", COMMAND_SPECS["unfold_track"].stability)
+        self.assertIn("5-Group", COMMAND_SPECS["fold_track"].notes)
+        self.assertIn("no documented native macro-to-parameter", COMMAND_SPECS["get_rack_macros"].notes)
+        self.assertIn("808 Selector Rack.adg", COMMAND_SPECS["get_rack_macros"].notes)
+        self.assertIn("Memory Bank import", COMMAND_SPECS["get_rack_structure"].notes)
+        self.assertIn("808 Selector Rack.adg", COMMAND_SPECS["refresh_rack_memory_entry"].notes)
+        self.assertIn("intentionally unsupported", COMMAND_SPECS["apply_rack_blueprint"].notes)

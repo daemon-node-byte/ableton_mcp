@@ -29,6 +29,8 @@ class _FakeTrack(object):
         can_be_armed=True,
         is_foldable=False,
         fold_state=False,
+        is_visible=True,
+        is_grouped=False,
         send_values=None,
     ):
         self.name = name
@@ -39,6 +41,8 @@ class _FakeTrack(object):
         self.can_be_armed = can_be_armed
         self.is_foldable = is_foldable
         self.fold_state = fold_state
+        self.is_visible = is_visible
+        self.is_grouped = is_grouped
         self.mixer_device = _FakeMixerDevice(send_values=send_values)
         self.devices = []
         self.clip_slots = []
@@ -78,6 +82,7 @@ class TrackOpsContractTests(unittest.TestCase):
                 tracks=[
                     _FakeTrack("Track 1", send_values=[0.25, 0.5]),
                     _FakeTrack("Group Track", is_foldable=True, fold_state=False),
+                    _FakeTrack("Grouped Child", is_grouped=True, is_visible=False),
                     _FakeTrack("Unarmable", can_be_armed=False),
                 ],
                 return_tracks=[
@@ -110,7 +115,7 @@ class TrackOpsContractTests(unittest.TestCase):
         success_result = harness._set_track_arm({"track_index": 0, "arm": True})
         self.assertEqual({"arm": True}, success_result)
         with self.assertRaisesRegex(ValueError, "cannot be armed"):
-            harness._set_track_arm({"track_index": 2, "arm": True})
+            harness._set_track_arm({"track_index": 3, "arm": True})
 
     def test_fold_and_unfold_require_foldable_track(self):
         harness = self.build_harness()
@@ -122,6 +127,13 @@ class TrackOpsContractTests(unittest.TestCase):
             harness._fold_track({"track_index": 0})
         with self.assertRaisesRegex(ValueError, "not foldable"):
             harness._unfold_track({"track_index": 0})
+
+    def test_get_track_info_includes_fold_and_visibility_fields_when_available(self):
+        harness = self.build_harness()
+        info = harness._get_track_info({"track_index": 2})
+        self.assertEqual("Grouped Child", info["name"])
+        self.assertTrue(info["is_grouped"])
+        self.assertFalse(info["is_visible"])
 
     def test_set_send_level_clamps_and_checks_bounds(self):
         harness = self.build_harness()

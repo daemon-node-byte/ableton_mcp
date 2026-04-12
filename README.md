@@ -25,7 +25,7 @@ AbletonMCP is a Python-first MCP server for Ableton Live 12 built around a custo
 
 ## Current Status
 
-Validated locally in Ableton Live 12 on `2026-04-10`:
+Validated locally in Ableton Live 12 through `2026-04-12`:
 
 - core connectivity and session introspection
 - regular track mutation and selection
@@ -33,18 +33,20 @@ Validated locally in Ableton Live 12 on `2026-04-10`:
 - Session View clip and MIDI note round trips
 - Arrangement View MIDI/audio clip creation, edit, delete, and duplication flows
 - browser discovery plus built-in instrument, drum-kit, MIDI-effect, and audio-effect loading
+- top-level native-device inspection, parameter read/write, activator-helper enable/disable, same-track reordering, deletion, and device-view collapse/expand
+- positive `fold_track` / `unfold_track` round-trip on a real foldable group track
 - first-class MCP tools for system-owned Instrument Rack and Audio Effect Rack creation, chain/device insertion, recursive structure inspection, and nested parameter tuning
-- project-root Memory Bank persistence for saved Live Sets and system-owned rack metadata
+- project-root Memory Bank persistence for saved Live Sets, including imported rack entries after `refresh_rack_memory_entry`
 - first-class MCP tools for rack, chain, and drum-rack inspection/mutation
+- direct live-vs-Memory Bank comparison on an imported non-system-owned rack target (`808 Selector Rack.adg`) before and after `refresh_rack_memory_entry`
 - LOM-backed drum-pad remap via `DrumChain.in_note` for Live 12.3+
 
 Still in the validation backlog:
 
-- positive fold/unfold validation on a real group track
 - take lane workflows
-- plugin-window behavior
-- third-party or broader browser/effect loading beyond the validated built-in slice
+- third-party or broader browser/plugin loading beyond the validated built-in/native slice
 - arrangement undo behavior and audio-move policy
+- third-party plugin behavior beyond the current native-device audit
 
 ## Quick Start
 

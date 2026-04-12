@@ -38,6 +38,7 @@ class TrackControlBatchValidator(object):
                 "restored_fold_state": False,
                 "deleted_tracks": [],
             },
+            "fold_validation": {},
         }
 
     def call(self, command_name, params=None):
@@ -94,6 +95,31 @@ class TrackControlBatchValidator(object):
             if track.get("is_foldable"):
                 return track_index, track
         return None, None
+
+    def find_group_child_indices(self, foldable_track_index, track_count):
+        child_indices = []
+        for track_index in range(int(foldable_track_index) + 1, int(track_count)):
+            track = self.track_info(track_index)
+            if not track.get("is_grouped"):
+                if child_indices:
+                    break
+                continue
+            child_indices.append(track_index)
+        return child_indices
+
+    def snapshot_track_visibility(self, track_indices):
+        snapshot = []
+        for track_index in list(track_indices or []):
+            track = self.track_info(track_index)
+            snapshot.append(
+                {
+                    "track_index": track_index,
+                    "name": track.get("name"),
+                    "is_grouped": bool(track.get("is_grouped")),
+                    "is_visible": track.get("is_visible"),
+                }
+            )
+        return snapshot
 
     def restore_selection(self):
         if not self.original_selection:
@@ -278,10 +304,21 @@ class TrackControlBatchValidator(object):
             "Send level did not round-trip",
         )
 
-    def validate_fold_commands(self, foldable_track_index, initial_track_info):
+    def validate_fold_commands(self, foldable_track_index, initial_track_info, track_count):
+        child_indices = self.find_group_child_indices(foldable_track_index, track_count)
         self.original_fold_state = {
             "track_index": foldable_track_index,
             "fold_state": bool(initial_track_info["fold_state"]),
+        }
+        self.summary["fold_validation"] = {
+            "target_track": {
+                "track_index": foldable_track_index,
+                "name": initial_track_info.get("name"),
+                "original_fold_state": bool(initial_track_info["fold_state"]),
+            },
+            "group_child_track_indices": child_indices,
+            "selected_track_before": self.call("get_selected_track", {}),
+            "child_visibility_before": self.snapshot_track_visibility(child_indices),
         }
 
         folded = self.call("fold_track", {"track_index": foldable_track_index})
@@ -289,12 +326,22 @@ class TrackControlBatchValidator(object):
         folded_track = self.track_info(foldable_track_index)
         self.require(bool(folded["fold_state"]) is True, "fold_track did not report folded state")
         self.require(bool(folded_track["fold_state"]) is True, "fold_track did not stick")
+        self.summary["fold_validation"]["selected_track_after_fold"] = self.call("get_selected_track", {})
+        self.summary["fold_validation"]["child_visibility_after_fold"] = self.snapshot_track_visibility(child_indices)
 
         unfolded = self.call("unfold_track", {"track_index": foldable_track_index})
         self.mark_validated("unfold_track")
         unfolded_track = self.track_info(foldable_track_index)
         self.require(bool(unfolded["fold_state"]) is False, "unfold_track did not report unfolded state")
         self.require(bool(unfolded_track["fold_state"]) is False, "unfold_track did not stick")
+        self.summary["fold_validation"]["selected_track_after_unfold"] = self.call("get_selected_track", {})
+        self.summary["fold_validation"]["child_visibility_after_unfold"] = self.snapshot_track_visibility(child_indices)
+        self.summary["fold_validation"]["visibility_readback_supported"] = any(
+            item.get("is_visible") is not None
+            for item in self.summary["fold_validation"]["child_visibility_before"]
+            + self.summary["fold_validation"]["child_visibility_after_fold"]
+            + self.summary["fold_validation"]["child_visibility_after_unfold"]
+        )
 
     def run(self):
         try:
@@ -339,7 +386,11 @@ class TrackControlBatchValidator(object):
             foldable_track_index, foldable_track_info = self.find_foldable_track_index(session_info["track_count"])
             if foldable_track_index is not None:
                 self.summary["discovered_targets"]["foldable_track_index"] = foldable_track_index
-                self.validate_fold_commands(foldable_track_index, foldable_track_info)
+                self.validate_fold_commands(
+                    foldable_track_index,
+                    foldable_track_info,
+                    session_info["track_count"],
+                )
             else:
                 self.mark_skipped(
                     ["fold_track", "unfold_track"],
