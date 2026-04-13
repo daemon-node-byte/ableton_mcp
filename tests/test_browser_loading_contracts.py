@@ -212,6 +212,11 @@ class BrowserLoadingContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "out of range"):
             harness._load_instrument_or_effect({"track_index": 0, "device_name": "Drift", "target_index": 3})
 
+    def test_load_instrument_or_effect_rejects_target_index_for_uri_loads(self):
+        harness = BrowserDeviceHarness()
+        with self.assertRaisesRegex(ValueError, "only supported with native device insertion"):
+            harness._load_instrument_or_effect({"track_index": 0, "uri": "query:Synths#Operator", "target_index": 0})
+
     def test_load_instrument_or_effect_rejects_missing_uri(self):
         harness = BrowserDeviceHarness()
         with self.assertRaisesRegex(ValueError, "Browser item not found"):

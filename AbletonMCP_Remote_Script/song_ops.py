@@ -52,6 +52,8 @@ class SongOpsMixin(object):
             "signature_denominator": song.signature_denominator,
             "is_playing": song.is_playing,
             "is_recording": song.record_mode,
+            "can_undo": bool(getattr(song, "can_undo", False)),
+            "can_redo": bool(getattr(song, "can_redo", False)),
             "current_song_time": round(song.current_song_time, 4),
             "loop_start": song.loop_start,
             "loop_length": song.loop_length,

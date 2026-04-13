@@ -219,6 +219,45 @@ class ServerRegistrationTests(unittest.TestCase):
         )
         self.assertEqual({"ok": True}, result)
 
+    def test_take_lane_wrappers_forward_expected_params(self):
+        cases = (
+            (
+                "get_take_lanes",
+                lambda: ableton_server.get_take_lanes(2),
+                "get_take_lanes",
+                {"track_index": 2},
+            ),
+            (
+                "create_take_lane",
+                lambda: ableton_server.create_take_lane(2),
+                "create_take_lane",
+                {"track_index": 2},
+            ),
+            (
+                "set_take_lane_name",
+                lambda: ableton_server.set_take_lane_name(2, 1, "Lead Takes"),
+                "set_take_lane_name",
+                {"track_index": 2, "lane_index": 1, "name": "Lead Takes"},
+            ),
+            (
+                "create_midi_clip_in_lane",
+                lambda: ableton_server.create_midi_clip_in_lane(2, 1, start_time=8.0, length=2.0),
+                "create_midi_clip_in_lane",
+                {"track_index": 2, "lane_index": 1, "start_time": 8.0, "length": 2.0},
+            ),
+            (
+                "get_clips_in_take_lane",
+                lambda: ableton_server.get_clips_in_take_lane(2, 1),
+                "get_clips_in_take_lane",
+                {"track_index": 2, "lane_index": 1},
+            ),
+        )
+        for _label, invoke_call, expected_command, expected_params in cases:
+            with mock.patch.object(ableton_server, "_invoke", return_value={"ok": True}) as invoke_mock:
+                result = invoke_call()
+            invoke_mock.assert_called_once_with(expected_command, expected_params)
+            self.assertEqual({"ok": True}, result)
+
     def test_rack_and_drum_wrappers_forward_expected_params(self):
         cases = (
             (

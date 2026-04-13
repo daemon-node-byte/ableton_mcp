@@ -4,7 +4,7 @@ import json
 import sys
 import time
 
-from mcp_server.client import AbletonCommandError, AbletonRemoteClient
+from mcp_server.client import AbletonCommandError, AbletonRemoteClient, AbletonTransportError
 
 
 PREFERRED_NATIVE_INSTRUMENTS = ("Drift", "Analog", "Operator")
@@ -12,6 +12,10 @@ PREFERRED_NATIVE_INSTRUMENTS = ("Drift", "Analog", "Operator")
 
 class BrowserLoadingBatchValidator(object):
     def __init__(self, host="localhost", port=9877, connect_timeout=5.0, response_timeout=30.0):
+        self.host = host
+        self.port = port
+        self.connect_timeout = connect_timeout
+        self.response_timeout = response_timeout
         self.client = AbletonRemoteClient(
             host=host,
             port=port,
@@ -24,6 +28,8 @@ class BrowserLoadingBatchValidator(object):
             "validated_commands": [],
             "negative_cases": [],
             "discovered_targets": {},
+            "content_classes_tested": [],
+            "third_party_search_audit": {"plugin_targets": [], "searches": [], "limitations": []},
         }
 
     def call(self, command_name, params=None):
@@ -66,6 +72,15 @@ class BrowserLoadingBatchValidator(object):
             )
         )
 
+    def call_with_timeout(self, command_name, params=None, response_timeout=None):
+        client = AbletonRemoteClient(
+            host=self.host,
+            port=self.port,
+            connect_timeout=self.connect_timeout,
+            response_timeout=response_timeout if response_timeout is not None else self.response_timeout,
+        )
+        return client.send_command(command_name, params or {})
+
     def pick_native_instrument_name(self, instrument_items):
         available_names = [item["name"] for item in instrument_items if item.get("is_loadable")]
         for preferred_name in PREFERRED_NATIVE_INSTRUMENTS:
@@ -87,6 +102,122 @@ class BrowserLoadingBatchValidator(object):
             return matches[0]
         raise AssertionError("No loadable {} were discovered".format(label))
 
+    def pick_loadable_search_result(self, query, category, label):
+        result = self.call("search_browser", {"query": query, "category": category})
+        if result["results"]:
+            for item in result["results"]:
+                if item.get("is_loadable"):
+                    return item
+        raise AssertionError("No loadable {} were discovered for query '{}'".format(label, query))
+
+    def discover_plugin_targets(self, session_info):
+        targets = []
+        for track in list(session_info.get("tracks", []) or []):
+            try:
+                devices = self.call("get_track_devices", {"track_index": int(track["index"])})
+            except Exception:
+                continue
+            for device in list(devices.get("devices", []) or []):
+                if not bool(device.get("is_plugin")):
+                    continue
+                name = str(device.get("name") or "").strip()
+                if not name:
+                    continue
+                queries = [name]
+                if name.endswith(" 2"):
+                    queries.append(name.rsplit(" ", 1)[0])
+                targets.append(
+                    {
+                        "track_index": int(track["index"]),
+                        "track_name": track.get("name"),
+                        "device_index": int(device.get("index", -1)),
+                        "device_name": name,
+                        "queries": queries,
+                    }
+                )
+        return targets
+
+    def audit_third_party_searches(self, plugin_targets):
+        audit = {"plugin_targets": plugin_targets, "searches": [], "limitations": []}
+        categories = ("instruments", "audio_effects", "sounds", "user_library", "packs")
+        discovered_uri = None
+        for target in plugin_targets:
+            for query in target["queries"]:
+                for category in categories:
+                    try:
+                        result = self.call_with_timeout(
+                            "search_browser",
+                            {"query": query, "category": category},
+                            response_timeout=6.0,
+                        )
+                        entry = {
+                            "query": query,
+                            "category": category,
+                            "count": int(result.get("count", 0)),
+                            "timed_out": False,
+                        }
+                        if result.get("results"):
+                            first_result = result["results"][0]
+                            entry["first_result_name"] = first_result.get("name")
+                            entry["first_result_uri"] = first_result.get("uri")
+                            entry["first_result_loadable"] = bool(first_result.get("is_loadable"))
+                            if discovered_uri is None:
+                                for item in result["results"]:
+                                    if item.get("is_loadable"):
+                                        discovered_uri = item
+                                        break
+                        audit["searches"].append(entry)
+                    except AbletonTransportError as exc:
+                        audit["searches"].append(
+                            {
+                                "query": query,
+                                "category": category,
+                                "timed_out": True,
+                                "message": str(exc),
+                            }
+                        )
+                        audit["limitations"].append(
+                            "search_browser(category='{}') timed out for query '{}' on the validated build".format(
+                                category, query
+                            )
+                        )
+            primary_query = target["queries"][0]
+            try:
+                all_result = self.call_with_timeout(
+                    "search_browser",
+                    {"query": primary_query, "category": "all"},
+                    response_timeout=8.0,
+                )
+                audit["searches"].append(
+                    {
+                        "query": primary_query,
+                        "category": "all",
+                        "count": int(all_result.get("count", 0)),
+                        "timed_out": False,
+                    }
+                )
+            except AbletonTransportError as exc:
+                audit["searches"].append(
+                    {
+                        "query": primary_query,
+                        "category": "all",
+                        "timed_out": True,
+                        "message": str(exc),
+                    }
+                )
+                audit["limitations"].append(
+                    "search_browser(category='all') timed out for query '{}' on the validated build".format(
+                        primary_query
+                    )
+                )
+        if discovered_uri is None and plugin_targets:
+            audit["limitations"].append(
+                "No discoverable third-party plugin URI was surfaced through the current normalized browser roots for {}".format(
+                    ", ".join(target["device_name"] for target in plugin_targets)
+                )
+            )
+        return audit, discovered_uri
+
     def safe_cleanup(self):
         for track_index in sorted(self.created_track_indices, reverse=True):
             try:
@@ -103,7 +234,11 @@ class BrowserLoadingBatchValidator(object):
             audio_effect_items = self.call("get_browser_items_at_path", {"path": "audio_effects"})["items"]
             midi_effect_items = self.call("get_browser_items_at_path", {"path": "midi_effects"})["items"]
             drum_items = self.call("get_browser_items_at_path", {"path": "drums"})["items"]
+            sounds_items = self.call("get_browser_items_at_path", {"path": "sounds"})["items"]
             drift_search = self.call("search_browser", {"query": "drift", "category": "instruments"})
+            sounds_search_item = self.pick_loadable_search_result("pad", "sounds", "sound preset URIs")
+            plugin_targets = self.discover_plugin_targets(session_info)
+            third_party_audit, third_party_uri_item = self.audit_third_party_searches(plugin_targets)
 
             self.summary["baseline"] = {
                 "health_check": health,
@@ -114,6 +249,8 @@ class BrowserLoadingBatchValidator(object):
             self.require("drums" in browser_tree and browser_tree["drums"], "Browser tree missing drums")
             self.require("audio_effects" in browser_tree, "Browser tree missing audio_effects")
             self.require("midi_effects" in browser_tree, "Browser tree missing midi_effects")
+            self.require("sounds" in browser_tree, "Browser tree missing sounds")
+            self.require(bool(sounds_items), "Sounds browser root returned no items")
             self.summary["validated_commands"].extend(
                 ["get_browser_tree", "get_browser_items_at_path", "search_browser"]
             )
@@ -147,15 +284,30 @@ class BrowserLoadingBatchValidator(object):
             self.summary["discovered_targets"] = {
                 "native_instrument_name": native_name,
                 "instrument_uri": uri_item["uri"],
+                "sounds_uri": sounds_search_item["uri"],
                 "drum_kit_uri": drum_kit_item["uri"],
                 "audio_effect_uri": audio_effect_item["uri"],
                 "midi_effect_uri": midi_effect_item["uri"],
             }
+            if third_party_uri_item is not None:
+                self.summary["discovered_targets"]["third_party_uri"] = third_party_uri_item["uri"]
+            self.summary["third_party_search_audit"] = third_party_audit
+            self.summary["content_classes_tested"] = [
+                "native_device_insert",
+                "instrument_uri",
+                "sounds_preset_uri",
+                "drum_kit_preset_uri",
+                "midi_effect_uri",
+                "audio_effect_uri",
+                "third_party_uri_discovery_limit",
+            ]
 
             native_track = self.call("create_midi_track", {})
             self.created_track_indices.append(native_track["index"])
             uri_track = self.call("create_midi_track", {})
             self.created_track_indices.append(uri_track["index"])
+            sounds_track = self.call("create_midi_track", {})
+            self.created_track_indices.append(sounds_track["index"])
             drum_track = self.call("create_midi_track", {})
             self.created_track_indices.append(drum_track["index"])
             midi_effect_track = self.call("create_midi_track", {})
@@ -165,6 +317,7 @@ class BrowserLoadingBatchValidator(object):
 
             self.call("set_track_name", {"track_index": native_track["index"], "name": "Browser Batch Native"})
             self.call("set_track_name", {"track_index": uri_track["index"], "name": "Browser Batch URI"})
+            self.call("set_track_name", {"track_index": sounds_track["index"], "name": "Browser Batch Sounds"})
             self.call("set_track_name", {"track_index": drum_track["index"], "name": "Browser Batch Drums"})
             self.call(
                 "set_track_name",
@@ -192,6 +345,15 @@ class BrowserLoadingBatchValidator(object):
             uri_devices = self.wait_for_device_growth(uri_track["index"], uri_before)
             self.require(uri_result["mode"] == "browser_uri_load", "URI load returned wrong mode")
             self.require(len(uri_devices) > uri_before, "Browser URI instrument load did not grow device count")
+
+            sounds_before = len(self.track_devices(sounds_track["index"]))
+            sounds_result = self.call(
+                "load_instrument_or_effect",
+                {"track_index": sounds_track["index"], "uri": sounds_search_item["uri"]},
+            )
+            sounds_devices = self.wait_for_device_growth(sounds_track["index"], sounds_before)
+            self.require(sounds_result["mode"] == "browser_uri_load", "Sounds preset load returned wrong mode")
+            self.require(len(sounds_devices) > sounds_before, "Sounds preset load did not grow device count")
 
             drum_before = len(self.track_devices(drum_track["index"]))
             drum_result = self.call(
@@ -236,6 +398,7 @@ class BrowserLoadingBatchValidator(object):
                 [
                     "load_instrument_or_effect:native",
                     "load_instrument_or_effect:uri",
+                    "load_instrument_or_effect:sounds_uri",
                     "load_drum_kit",
                     "load_instrument_or_effect:midi_effect_uri",
                     "load_instrument_or_effect:audio_effect_uri",
@@ -256,6 +419,11 @@ class BrowserLoadingBatchValidator(object):
                 "load_instrument_or_effect",
                 {"track_index": native_track["index"], "uri": "query:Synths#DoesNotExist"},
                 "Browser item not found",
+            )
+            self.expect_error(
+                "load_instrument_or_effect",
+                {"track_index": uri_track["index"], "uri": uri_item["uri"], "target_index": 0},
+                "only supported with native device insertion",
             )
             self.expect_error(
                 "load_instrument_or_effect",

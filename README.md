@@ -32,9 +32,13 @@ Validated locally in Ableton Live 12 through `2026-04-12`:
 - return-track inspection, return mixer mutation, and send control in a set with existing return tracks
 - Session View clip and MIDI note round trips
 - Arrangement View MIDI/audio clip creation, edit, delete, and duplication flows
-- browser discovery plus built-in instrument, drum-kit, MIDI-effect, and audio-effect loading
+- arrangement residual validator now records mutation-level can_undo/can_redo evidence and explicit side effects for create/resize/move- MIDI/duplicate audits
+- confirmed audio clip move remains intentionally unsupported (`move_arrangement_clip` returns stable MIDI-only error)
+- browser discovery plus built-in instrument, sounds-preset, drum-kit, MIDI-effect, and audio-effect loading
+- confirmed current browser limitation for third-party plugin URI discovery on the validated surface: category-scoped searches found no discoverable loadable URI for installed plugin target `Serum 2`, and `search_browser(category=\"all\")` may time out
 - top-level native-device inspection, parameter read/write, activator-helper enable/disable, same-track reordering, deletion, and device-view collapse/expand
 - positive `fold_track` / `unfold_track` round-trip on a real foldable group track
+- first-class MCP tools for take-lane inspection, creation, rename, MIDI clip creation, and clip listing
 - first-class MCP tools for system-owned Instrument Rack and Audio Effect Rack creation, chain/device insertion, recursive structure inspection, and nested parameter tuning
 - project-root Memory Bank persistence for saved Live Sets, including imported rack entries after `refresh_rack_memory_entry`
 - first-class MCP tools for rack, chain, and drum-rack inspection/mutation
@@ -43,9 +47,7 @@ Validated locally in Ableton Live 12 through `2026-04-12`:
 
 Still in the validation backlog:
 
-- take lane workflows
-- third-party or broader browser/plugin loading beyond the validated built-in/native slice
-- arrangement undo behavior and audio-move policy
+- arrangement undo/redo residual for audited mutation slice (`create_arrangement_audio_clip`, `resize_arrangement_clip`, `move_arrangement_clip` MIDI path, `duplicate_to_arrangement`): on the 2026-04-12 pass, mutate applied but undo popped disposable track setup instead of proving clip-state rollback
 - third-party plugin behavior beyond the current native-device audit
 
 ## Quick Start
@@ -77,6 +79,7 @@ First-class MCP tools currently cover:
 - Arrangement View clip creation and editing
 - device inspection, named parameter access, and nested rack-device path tuning
 - browser discovery and validated built-in loading
+- take-lane inspection, creation, rename, and MIDI clip workflows
 - system-owned rack authoring, blueprint application, Memory Bank persistence, and rack/chain/drum-rack inspection/mutation
 
 Anything not promoted yet is still reachable through `ableton_raw_command(...)`.
