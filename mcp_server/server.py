@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 from typing import Any, Dict, List, Optional
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 from .client import AbletonRemoteClient
 from .command_specs import FIRST_CLASS_MCP_COMMANDS, get_command_spec
@@ -13,6 +13,11 @@ from .command_specs import FIRST_CLASS_MCP_COMMANDS, get_command_spec
 
 JsonDict = Dict[str, Any]
 NoteList = List[Dict[str, Any]]
+DEFAULT_TRANSPORT = "stdio"
+SUPPORTED_TRANSPORTS = ("stdio", "http", "streamable-http", "sse")
+DEFAULT_BIND_HOST = "0.0.0.0"
+DEFAULT_HTTP_PATH = "/mcp/"
+DEFAULT_HTTP_PORT = 8080
 
 
 def _make_client():
@@ -23,6 +28,46 @@ def _invoke(command_name, params):
     get_command_spec(command_name)
     client = _make_client()
     return client.send_command(command_name, params)
+
+
+def _normalize_transport_name(value: Optional[str]) -> str:
+    transport = (value or DEFAULT_TRANSPORT).strip().lower()
+    if transport not in SUPPORTED_TRANSPORTS:
+        raise ValueError("Unsupported ABLETON_MCP_TRANSPORT '{}'".format(transport))
+    return transport
+
+
+def _normalize_http_path(value: Optional[str]) -> str:
+    path = (value or DEFAULT_HTTP_PATH).strip() or DEFAULT_HTTP_PATH
+    if not path.startswith("/"):
+        path = "/" + path
+    if not path.endswith("/"):
+        path = path + "/"
+    return path
+
+
+def _get_http_port() -> int:
+    raw_value = os.environ.get("PORT", str(DEFAULT_HTTP_PORT))
+    try:
+        return int(raw_value)
+    except ValueError:
+        raise ValueError("Invalid PORT '{}'".format(raw_value))
+
+
+def _get_run_configuration():
+    requested_transport = _normalize_transport_name(os.environ.get("ABLETON_MCP_TRANSPORT"))
+    if requested_transport == "stdio":
+        return {"transport": "stdio", "kwargs": {}}
+
+    transport = "http" if requested_transport in ("http", "streamable-http") else "sse"
+    return {
+        "transport": transport,
+        "kwargs": {
+            "host": os.environ.get("ABLETON_MCP_BIND_HOST", DEFAULT_BIND_HOST),
+            "port": _get_http_port(),
+            "path": _normalize_http_path(os.environ.get("ABLETON_MCP_HTTP_PATH")),
+        },
+    }
 
 
 mcp = FastMCP(
@@ -643,10 +688,8 @@ def ableton_raw_command(type: str, params: Optional[JsonDict] = None):
 
 
 def main():
-    transport = os.environ.get("ABLETON_MCP_TRANSPORT", "stdio")
-    if transport not in ("stdio", "sse", "streamable-http"):
-        raise ValueError("Unsupported ABLETON_MCP_TRANSPORT '{}'".format(transport))
-    mcp.run(transport=transport)
+    configuration = _get_run_configuration()
+    mcp.run(transport=configuration["transport"], **configuration["kwargs"])
 
 
 __all__ = ["FIRST_CLASS_MCP_COMMANDS", "ableton_raw_command", "main", "mcp"]

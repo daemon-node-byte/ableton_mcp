@@ -1,10 +1,10 @@
 [project]
 name = "ableton-mcp-v2"
-version = "0.3.0b0"
+version = "1.0.0"
 description = "Comprehensive MCP server for Ableton Live 12"
 requires-python = ">=3.10"
 dependencies = [
-    "mcp[cli]>=1.0.0",
+    "fastmcp==3.2.0",
 ]
 
 [project.scripts]

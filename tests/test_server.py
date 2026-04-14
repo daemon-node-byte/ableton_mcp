@@ -9,13 +9,13 @@ from mcp_server.command_specs import FIRST_CLASS_MCP_COMMANDS
 try:
     from mcp_server import server as ableton_server
 except ModuleNotFoundError as exc:
-    if exc.name == "mcp":
+    if exc.name in ("fastmcp", "mcp"):
         ableton_server = None
     else:
         raise
 
 
-@unittest.skipIf(ableton_server is None, "mcp SDK is not installed in this Python environment")
+@unittest.skipIf(ableton_server is None, "fastmcp is not installed in this Python environment")
 class ServerRegistrationTests(unittest.TestCase):
     def test_entrypoint_exists(self):
         self.assertTrue(callable(ableton_server.main))
@@ -39,6 +39,66 @@ class ServerRegistrationTests(unittest.TestCase):
             result = ableton_server.get_session_path()
         invoke_mock.assert_called_once_with("get_session_path", {})
         self.assertEqual({"path": "/tmp/Test.als"}, result)
+
+    def test_main_uses_stdio_transport_by_default(self):
+        with mock.patch.dict("os.environ", {}, clear=True):
+            with mock.patch.object(ableton_server.mcp, "run") as run_mock:
+                ableton_server.main()
+        run_mock.assert_called_once_with(transport="stdio")
+
+    def test_main_uses_http_transport_with_cloud_run_defaults(self):
+        env = {
+            "ABLETON_MCP_TRANSPORT": "http",
+            "PORT": "9090",
+        }
+        with mock.patch.dict("os.environ", env, clear=True):
+            with mock.patch.object(ableton_server.mcp, "run") as run_mock:
+                ableton_server.main()
+        run_mock.assert_called_once_with(
+            transport="http",
+            host="0.0.0.0",
+            port=9090,
+            path="/mcp/",
+        )
+
+    def test_main_maps_streamable_http_to_http(self):
+        env = {
+            "ABLETON_MCP_TRANSPORT": "streamable-http",
+            "PORT": "7000",
+            "ABLETON_MCP_BIND_HOST": "127.0.0.1",
+            "ABLETON_MCP_HTTP_PATH": "custom",
+        }
+        with mock.patch.dict("os.environ", env, clear=True):
+            with mock.patch.object(ableton_server.mcp, "run") as run_mock:
+                ableton_server.main()
+        run_mock.assert_called_once_with(
+            transport="http",
+            host="127.0.0.1",
+            port=7000,
+            path="/custom/",
+        )
+
+    def test_main_uses_sse_transport_with_http_binding(self):
+        env = {
+            "ABLETON_MCP_TRANSPORT": "sse",
+            "PORT": "8088",
+            "ABLETON_MCP_HTTP_PATH": "/events",
+        }
+        with mock.patch.dict("os.environ", env, clear=True):
+            with mock.patch.object(ableton_server.mcp, "run") as run_mock:
+                ableton_server.main()
+        run_mock.assert_called_once_with(
+            transport="sse",
+            host="0.0.0.0",
+            port=8088,
+            path="/events/",
+        )
+
+    def test_main_rejects_invalid_transport(self):
+        env = {"ABLETON_MCP_TRANSPORT": "websocket"}
+        with mock.patch.dict("os.environ", env, clear=True):
+            with self.assertRaisesRegex(ValueError, "Unsupported ABLETON_MCP_TRANSPORT"):
+                ableton_server.main()
 
     def test_track_wrappers_forward_expected_params(self):
         cases = (

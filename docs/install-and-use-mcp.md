@@ -1,13 +1,13 @@
 # Install and Use AbletonMCP v2
 
-This is the canonical setup and runtime usage guide for AbletonMCP.
+This is the canonical setup and runtime usage guide for AbletonMCP across local `stdio`, local Docker, and remote HTTP deployments.
 
 ## Overview
 
 AbletonMCP has two parts:
 
 1. `AbletonMCP_Remote_Script`, which runs inside Ableton Live
-2. the Python MCP server in `mcp_server`, which exposes tools over `stdio`
+2. the Python MCP server in `mcp_server`, which exposes tools over local `stdio` or remote HTTP
 
 The Live-side bridge listens on TCP port `9877` by default.
 
@@ -17,7 +17,7 @@ The Live-side bridge listens on TCP port `9877` by default.
 - Python `3.10+`
 - `uv` for the recommended local run flow
 - Docker only if you want the containerized server
-- an MCP client that can launch a `stdio` server process
+- an MCP client that can launch a `stdio` server process or connect to a remote MCP URL
 
 ## 1. Install the Remote Script
 
@@ -56,6 +56,7 @@ Recommended command:
 
 ```bash
 cd /Users/joshmclain/code/AbletonMCP_v2
+ABLETON_MCP_TRANSPORT=stdio \
 uv run --python 3.11 ableton-mcp
 ```
 
@@ -66,8 +67,19 @@ Useful environment variables:
 - `ABLETON_MCP_CONNECT_TIMEOUT` default: `5.0`
 - `ABLETON_MCP_RESPONSE_TIMEOUT` default: `30.0`
 - `ABLETON_MCP_TRANSPORT` default: `stdio`
+- supported transports: `stdio`, `http`, `streamable-http`, `sse`
+- `ABLETON_MCP_BIND_HOST` default: `0.0.0.0`
+- `ABLETON_MCP_HTTP_PATH` default: `/mcp/`
+- `PORT` default for remote HTTP hosting: `8080`
+
+Note:
+
+- the Python server defaults to `stdio`
+- the Docker image defaults to `streamable-http` so it can run on Cloud Run without extra wrapper commands
 
 ## 4. Docker Alternative
+
+### Local Docker For a Desktop MCP Client (`stdio`)
 
 Build:
 
@@ -79,6 +91,7 @@ Run:
 
 ```bash
 docker run --rm -i \
+  -e ABLETON_MCP_TRANSPORT=stdio \
   -e ABLETON_MCP_HOST=host.docker.internal \
   -e ABLETON_MCP_PORT=9877 \
   ableton-mcp-v2
@@ -88,6 +101,29 @@ On Linux, also add:
 
 ```bash
 --add-host=host.docker.internal:host-gateway
+```
+
+### Local Docker For Remote HTTP Testing
+
+```bash
+docker run --rm -p 8080:8080 \
+  -e ABLETON_MCP_TRANSPORT=streamable-http \
+  -e PORT=8080 \
+  -e ABLETON_MCP_HOST=host.docker.internal \
+  -e ABLETON_MCP_PORT=9877 \
+  ableton-mcp-v2
+```
+
+On Linux, also add:
+
+```bash
+--add-host=host.docker.internal:host-gateway
+```
+
+Remote MCP endpoint:
+
+```text
+http://localhost:8080/mcp/
 ```
 
 ## 5. Example MCP Client Configuration
@@ -104,6 +140,8 @@ Example Docker-backed `mcpServers` entry:
         "--rm",
         "-i",
         "-e",
+        "ABLETON_MCP_TRANSPORT=stdio",
+        "-e",
         "ABLETON_MCP_HOST=host.docker.internal",
         "-e",
         "ABLETON_MCP_PORT=9877",
@@ -116,7 +154,22 @@ Example Docker-backed `mcpServers` entry:
 
 On Linux, add `--add-host=host.docker.internal:host-gateway` to the Docker args.
 
-## 6. Current Verified Scope
+## 6. Google Cloud Run Deployment
+
+For the full Docker-based Cloud Run deployment workflow, use [google-cloud-run-deployment.md](/Users/joshmclain/code/AbletonMCP_v2/docs/google-cloud-run-deployment.md).
+
+Remote endpoint shape:
+
+```text
+https://<service-url>/mcp/
+```
+
+Important security note:
+
+- the current Cloud Run guide intentionally uses a public unauthenticated endpoint
+- that is a security risk and should be treated as an explicit tradeoff, not a safe default
+
+## 7. Current Verified Scope
 
 Direct Live validation through `2026-04-12` currently covers:
 
@@ -141,7 +194,7 @@ Direct Live validation through `2026-04-12` currently covers:
 
 For the full command surface and status map, use [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md) and [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py).
 
-## 7. Validation Helpers
+## 8. Validation Helpers
 
 Canonical Python test command:
 
@@ -214,7 +267,7 @@ uv run --python 3.11 python scripts/validate_macro_and_user_rack_batch.py \
 
 The `2026-04-12` imported-rack comparison used browser-loaded preset `808 Selector Rack.adg` as the manual target and confirmed the expected pre-import vs post-import semantics.
 
-## 8. Important Contract Notes
+## 9. Important Contract Notes
 
 - `create_arrangement_audio_clip` requires an absolute existing `file_path`
 - `delete_arrangement_clip`, `resize_arrangement_clip`, and `move_arrangement_clip` require exactly one selector: `clip_index` or `start_time`
