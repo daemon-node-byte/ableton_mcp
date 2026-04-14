@@ -8,6 +8,8 @@ This folder holds the practical setup docs, the command reference, and the archi
   - project overview, current status, and quick-start summary
 - [install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md)
   - canonical setup, runtime usage, validators, and troubleshooting
+- [google-cloud-run-deployment.md](/Users/joshmclain/code/AbletonMCP_v2/docs/google-cloud-run-deployment.md)
+  - Docker-based Google Cloud Run deployment for a remote MCP endpoint
 - [command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md)
   - canonical command inventory grouped by domain
 

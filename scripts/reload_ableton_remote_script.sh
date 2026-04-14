@@ -35,7 +35,9 @@ fi
 
 if pgrep -f "$APP_EXECUTABLE" >/dev/null; then
   echo "Quitting $APP_NAME..."
-  osascript -e "tell application \"$APP_NAME\" to quit"
+  (
+    osascript -e "tell application \"$APP_NAME\" to quit" >/dev/null 2>&1 || true
+  ) &
   for _ in {1..60}; do
     if ! pgrep -f "$APP_EXECUTABLE" >/dev/null; then
       break

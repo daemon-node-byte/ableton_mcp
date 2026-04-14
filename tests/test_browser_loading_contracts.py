@@ -212,6 +212,11 @@ class BrowserLoadingContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "out of range"):
             harness._load_instrument_or_effect({"track_index": 0, "device_name": "Drift", "target_index": 3})
 
+    def test_load_instrument_or_effect_rejects_target_index_for_uri_loads(self):
+        harness = BrowserDeviceHarness()
+        with self.assertRaisesRegex(ValueError, "only supported with native device insertion"):
+            harness._load_instrument_or_effect({"track_index": 0, "uri": "query:Synths#Operator", "target_index": 0})
+
     def test_load_instrument_or_effect_rejects_missing_uri(self):
         harness = BrowserDeviceHarness()
         with self.assertRaisesRegex(ValueError, "Browser item not found"):
@@ -224,6 +229,7 @@ class BrowserLoadingContractTests(unittest.TestCase):
         self.assertEqual(0, result["device_count_before"])
         self.assertEqual(1, result["device_count_after"])
         self.assertEqual("Drift", result["loaded_device_name"])
+        self.assertFalse(result["is_plugin"])
 
     def test_load_instrument_or_effect_returns_device_metadata_for_uri_load(self):
         harness = BrowserDeviceHarness()
@@ -232,6 +238,7 @@ class BrowserLoadingContractTests(unittest.TestCase):
         self.assertEqual("query:Synths#Operator", result["uri"])
         self.assertEqual(1, result["device_count_after"])
         self.assertEqual("Operator", result["loaded_device_name"])
+        self.assertFalse(result["is_plugin"])
 
     def test_load_instrument_or_effect_supports_built_in_audio_effect_uris(self):
         harness = BrowserDeviceHarness()

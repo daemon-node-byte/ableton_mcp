@@ -21,14 +21,22 @@ Use [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_serve
 Direct Live validation currently covers:
 
 - connectivity and session inspection
+- regular track mutation and selection
+- return-track inspection, return mixer mutation, and send control in a set with existing return tracks
 - Session View clip and note round trips
 - Arrangement View clip creation, edit, delete, import, and duplication
-- browser discovery and validated built-in loading
+- browser discovery and validated built-in loading, including a loadable `sounds` preset URI
 - built-in MIDI-effect and audio-effect loading
+- confirmed current third-party browser limitation on the validated surface: category-scoped searches for installed plugin target `Serum 2` produced no discoverable URI, and `search_browser(category="all")` may time out
+- top-level device inspection, selection, parameter read/write, activator-helper enable/disable, same-track reordering, deletion, and device-view collapse/expand on native devices
+- positive `fold_track` / `unfold_track` round-trip on a real foldable group track
 - system-owned Instrument Rack and Audio Effect Rack creation, chain insertion, nested device insertion, and recursive structure readback
+- exposed rack macro value read/write on a validated system-owned rack plus stable rejection of native macro-authoring directives
+- direct live-vs-Memory Bank comparison on an imported non-system-owned rack target (`808 Selector Rack.adg`) before and after `refresh_rack_memory_entry`
 - nested rack-device parameter read/write via track-relative LOM-style paths
-- project-root Memory Bank persistence for system-owned racks in saved Live Sets
+- project-root Memory Bank persistence for system-owned and imported racks in saved Live Sets
 - rack, chain, and drum-rack inspection/mutation
+- take-lane inspection, creation, rename, MIDI clip creation, and clip listing on a disposable MIDI track
 
 For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md).
 
@@ -96,33 +104,43 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 | `create_return_track` | Create return track | plausible |
 | `delete_track` | Delete track | confirmed |
 | `duplicate_track` | Duplicate track | plausible |
-| `set_track_name` | Rename track | plausible |
-| `set_track_color` | Set track color | plausible |
-| `set_track_volume` | Set volume | plausible |
-| `set_track_pan` | Set pan | plausible |
-| `set_track_mute` | Set mute | plausible |
-| `set_track_solo` | Set solo | plausible |
-| `set_track_arm` | Set arm | plausible |
+| `set_track_name` | Rename track | confirmed |
+| `set_track_color` | Set track color | confirmed |
+| `set_track_volume` | Set volume | confirmed |
+| `set_track_pan` | Set pan | confirmed |
+| `set_track_mute` | Set mute | confirmed |
+| `set_track_solo` | Set solo | confirmed |
+| `set_track_arm` | Set arm | confirmed |
 | `set_track_monitoring` | Set monitoring mode | plausible |
 | `freeze_track` | Freeze track | needs audit |
 | `flatten_track` | Flatten track | needs audit |
-| `fold_track` | Fold group/foldable track | plausible |
-| `unfold_track` | Unfold group/foldable track | plausible |
+| `fold_track` | Fold group/foldable track | confirmed |
+| `unfold_track` | Unfold group/foldable track | confirmed |
 | `unarm_all` | Unarm all armable tracks | plausible |
 | `unsolo_all` | Unsolo all tracks | plausible |
 | `unmute_all` | Unmute all tracks | plausible |
 | `set_track_delay` | Set track delay | needs audit |
-| `set_send_level` | Set send level | plausible |
-| `get_return_tracks` | List return tracks | plausible |
-| `get_return_track_info` | Inspect one return track | plausible |
-| `set_return_volume` | Set return volume | plausible |
-| `set_return_pan` | Set return pan | plausible |
+| `set_send_level` | Set send level | confirmed |
+| `get_return_tracks` | List return tracks | confirmed |
+| `get_return_track_info` | Inspect one return track | confirmed |
+| `set_return_volume` | Set return volume | confirmed |
+| `set_return_pan` | Set return pan | confirmed |
 | `set_track_input_routing` | Set input routing type | needs audit |
 | `set_track_output_routing` | Set output routing type | needs audit |
 | `get_track_input_routing` | Read available/current input routing | plausible |
 | `get_track_output_routing` | Read available/current output routing | plausible |
-| `select_track` | Select track in Live view | plausible |
-| `get_selected_track` | Return selected track | plausible |
+| `select_track` | Select normal, return, or master track in Live view | confirmed |
+| `get_selected_track` | Return the selected normal, return, or master track | confirmed |
+
+### Notes
+
+- `set_track_color` is validated against the applied/read-back color because the LOM maps requested RGB values to the nearest track color chooser value.
+- `set_track_solo` is confirmed as a target-state write only; the LOM does not guarantee exclusive-solo side effects.
+- `set_track_arm` now raises a stable error when the target cannot be armed.
+- `select_track` requires exactly one of `track_index`, `return_index`, or `master=True`.
+- `get_selected_track` now returns `selection_type`, `name`, `index`, `track_index`, and `return_index` so callers can distinguish regular-track, return-track, and master-track selections.
+- `fold_track` and `unfold_track` are confirmed on the current Live 12.3.7 set using foldable group track `5-Group`, with the original `fold_state` restored during cleanup.
+- during that run, the selection stayed on the pre-existing return-track target and the current Python Remote Script surface did not expose child-track `is_visible` readback, so confirmation rests on `fold_state` round-trip plus grouped-child discovery rather than direct visibility assertions.
 
 ## 4. Master / cue / meters
 
@@ -182,7 +200,9 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 - `create_arrangement_audio_clip` is validated with an absolute existing `file_path` on an audio track.
 - `delete_arrangement_clip`, `resize_arrangement_clip`, and `move_arrangement_clip` require exactly one selector: `clip_index` or `start_time`.
 - `move_arrangement_clip` remains MIDI-only in this pass.
-- arrangement undo behavior is still not documented as supported.
+- the 2026-04-12 arrangement residual validator now records `can_undo`/`can_redo` snapshots and observable side effects per mutation audit.
+- in that pass, all audited arrangement mutations (`create_arrangement_audio_clip`, `resize_arrangement_clip`, `move_arrangement_clip` MIDI path, and `duplicate_to_arrangement`) showed mutate application but did not yet prove clean clip-state undo/redo rollback in the disposable-track flow because undo popped disposable track setup.
+- audio clip move remains intentionally unsupported and returned the stable MIDI-only error path in the same pass.
 
 ## 7. Scenes
 
@@ -203,31 +223,37 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 
 | Command | Purpose | Status |
 |---|---|---|
-| `get_track_devices` | List devices on track | plausible |
-| `get_device_parameters` | List parameters for a device | plausible |
-| `set_device_parameter` | Set parameter by index | plausible |
-| `set_device_parameter_by_name` | Set parameter by name | plausible |
-| `get_device_parameter_by_name` | Read parameter by name | plausible |
+| `get_track_devices` | List devices on track | confirmed |
+| `get_device_parameters` | List parameters for a device | confirmed |
+| `set_device_parameter` | Set parameter by index | confirmed |
+| `set_device_parameter_by_name` | Set parameter by name | confirmed |
+| `get_device_parameter_by_name` | Read parameter by name | confirmed |
 | `get_device_parameters_at_path` | List parameters for a nested device in a rack tree | confirmed |
 | `set_device_parameter_at_path` | Set nested device parameter by index using a rack path | confirmed |
 | `set_device_parameter_by_name_at_path` | Set nested device parameter by name using a rack path | confirmed |
-| `toggle_device` | Toggle device active state | needs audit |
-| `set_device_enabled` | Set device enabled state | plausible |
-| `delete_device` | Delete device from track | plausible |
-| `move_device` | Reorder device on track | plausible |
-| `show_plugin_window` | Show/select plugin window | needs audit |
-| `hide_plugin_window` | Hide/collapse plugin window | needs audit |
+| `toggle_device` | Activator-parameter toggle helper | confirmed |
+| `set_device_enabled` | Activator-parameter enable helper | confirmed |
+| `delete_device` | Delete device from track | confirmed |
+| `move_device` | Reorder device on track | confirmed |
+| `show_plugin_window` | Expand device in the device chain | confirmed |
+| `hide_plugin_window` | Collapse device in the device chain | confirmed |
 | `load_instrument_or_effect` | Load browser item onto track | confirmed |
-| `get_device_class_name` | Return device class | plausible |
-| `select_device` | Select device | plausible |
-| `get_selected_device` | Return selected device | plausible |
+| `get_device_class_name` | Return device class | confirmed |
+| `select_device` | Select device | confirmed |
+| `get_selected_device` | Return selected device | confirmed |
 
 ### Notes
 
+- top-level device inspection and mutation were revalidated in Ableton Live 12.3.7 on 2026-04-11 on a disposable MIDI track loaded with native devices.
+- on the validated Python Remote Script surface, `get_track_devices` on a fresh disposable track returned no mixer device even though the LOM docs say `Track.devices` includes it. Top-level `device_index` now reflects the observed `track.devices` ordering for this build.
 - third-party plugin parameters may still require manual Configure in Live before they appear.
-- `show_plugin_window` and `hide_plugin_window` are still best-effort device-view helpers, not proven plugin editor control.
-- `load_instrument_or_effect` is validated in Live for native built-in device insertion plus discovered built-in instrument, MIDI-effect, and audio-effect URIs.
-- third-party plugin URIs remain backlog work.
+- `toggle_device` and `set_device_enabled` are confirmed only for the narrowed activator-parameter helper contract. The LOM exposes `Device.is_active` as read-only, so these commands should not be treated as universal device power setters.
+- `move_device` is confirmed for same-track top-level native-device reordering on the validated Live 12.3.7 build and uses the documented `Song.move_device(...)` API on the Python surface.
+- `get_selected_device` should be interpreted as `song.view.selected_track` plus `selected_track.view.selected_device`, not an undocumented song-level selected-device child.
+- `show_plugin_window` and `hide_plugin_window` are confirmed only for device-view collapse/expand via `Device.View.is_collapsed`, not plugin editor control.
+- `load_instrument_or_effect` is validated in Live for native built-in device insertion plus discovered built-in instrument, `sounds` preset, MIDI-effect, and audio-effect URIs, and native insertion metadata was revalidated on 2026-04-11 during the device audit pass.
+- native `device_name` / `native_device_name` insertion is limited by `Track.insert_device`, which the LOM documents as native Live devices only. Max for Live and third-party plugin insertion remain backlog work.
+- third-party plugin URI loading is not currently discoverable through the validated normalized browser roots. On the 2026-04-12 pass, category-scoped searches for installed plugin target `Serum 2` surfaced no loadable URI, and `search_browser(category="all")` could time out.
 - `target_index` only applies to native insertion, not browser URI loading.
 - the path-based device commands use track-relative LOM-style paths such as `devices 0 chains 1 devices 2`.
 - EQ Eight shorthand names such as `Gain A`, `Frequency A`, and `Q A` are normalized to the validated Live parameter names during nested rack tuning.
@@ -256,7 +282,9 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 - system-owned Instrument Rack and Audio Effect Rack authoring is now directly validated in Live 12.3+ using native rack insertion plus chain/device creation.
 - `get_rack_structure` returns track-relative LOM-style paths for racks, chains, devices, and return chains so later tuning calls can reuse them directly.
 - `apply_rack_blueprint` supports deterministic built-in device graphs and rejects native macro-mapping directives with a stable unsupported error.
-- native macro value read/write is confirmed only for already-exposed rack macros. Native macro-to-parameter authoring and macro-to-macro authoring are still out of scope.
+- native macro value read/write is confirmed only for already-exposed rack macros.
+- the LOM-backed contract for this repo now treats native macro-to-parameter authoring and macro-to-macro authoring as explicitly unsupported, not merely unimplemented.
+- imported/user-authored racks are validated for direct live structure and already-exposed macro inspection before import, but repo-level semantic metadata is only considered authoritative after `refresh_rack_memory_entry`.
 
 ## 10. Drum rack
 
@@ -290,6 +318,7 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 - the Memory Bank lives under `.ableton-mcp/memory` at the saved Ableton project root.
 - Memory Bank writes require a saved Live Set because the project root is derived from `Song.file_path`.
 - system-owned rack entries store rack identity, blueprint provenance, recursive structure, current macro snapshot, and explicit notes when native macro mappings are unsupported or unknown.
+- `refresh_rack_memory_entry` was revalidated on `2026-04-12` against imported rack preset `808 Selector Rack.adg` and remains the current path for importing a non-system-owned rack into authoritative Memory Bank metadata.
 
 ## 12. Browser
 
@@ -304,24 +333,29 @@ For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshm
 
 - browser discovery is directly validated in Live 12 across the normalized top-level categories.
 - `search_browser` rejects blank queries instead of crawling the whole browser.
+- category-scoped browser search is the confirmed path for the current normalized roots.
+- `search_browser(category="all")` may be too expensive for plugin discovery on the validated build and can time out.
+- discovered built-in `sounds` preset URIs are now part of the confirmed browser-loading slice.
 - `load_drum_kit` is validated for discovered built-in drum-kit preset URIs and rejects the generic `Drum Rack` device entry.
-- third-party plugin URIs and broader effect-loading behavior remain backlog work.
+- the current normalized roots do not expose a discoverable third-party plugin URI for installed target `Serum 2`, so third-party URI loading is currently documented as a browser-surface limitation rather than a confirmed load-path capability.
 
 ## 13. Take lanes (Live 12+)
 
 | Command | Purpose | Status |
 |---|---|---|
-| `get_take_lanes` | List take lanes on track | plausible |
-| `create_take_lane` | Create take lane | high risk |
-| `set_take_lane_name` | Rename take lane | needs audit |
-| `create_midi_clip_in_lane` | Create MIDI clip in take lane | high risk |
-| `get_clips_in_take_lane` | List clips in take lane | needs audit |
-| `delete_take_lane` | Delete take lane | high risk |
+| `get_take_lanes` | List take lanes on track | confirmed |
+| `create_take_lane` | Create take lane | confirmed |
+| `set_take_lane_name` | Rename take lane | confirmed |
+| `create_midi_clip_in_lane` | Create MIDI clip in take lane | confirmed |
+| `get_clips_in_take_lane` | List clips in take lane | confirmed |
+| `delete_take_lane` | Delete take lane | partial |
 
 ### Notes
 
-- the implementation now uses `Track.create_take_lane()` when available.
-- this domain should still be treated as experimental until it gets direct runtime coverage.
+- `get_take_lanes`, `create_take_lane`, `set_take_lane_name`, `create_midi_clip_in_lane`, and `get_clips_in_take_lane` are now first-class MCP tools with direct Live validation on 2026-04-12.
+- the confirmed core follows the LOM-backed surface for `Track.take_lanes`, `Track.create_take_lane`, `TakeLane.name`, `TakeLane.arrangement_clips`, and `TakeLane.create_midi_clip`.
+- `create_midi_clip_in_lane` is confirmed only for MIDI tracks and now raises stable validation errors for non-MIDI tracks, bad lane indices, and invalid `start_time` / `length` values.
+- `delete_take_lane` is intentionally outside the confirmed core: `Track.delete_take_lane` is not documented in the LOM and was unavailable on the validated Python Remote Script surface, so the command now fails with a stable error when unavailable.
 
 ## 14. View / selection / UI focus
 

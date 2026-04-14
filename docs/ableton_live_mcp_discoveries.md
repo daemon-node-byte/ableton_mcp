@@ -18,6 +18,7 @@ It is no longer the place for the current verified command list or setup flow. U
 - Arrangement editing is feasible in an MCP-oriented Live stack; it is not just a Session View problem.
 - Browser/device loading is where stock `AbletonOSC`-style stacks tend to hit their limits.
 - Device parameter access is broadly feasible, but third-party plugin depth depends on what Live exposes as automatable parameters.
+- Top-level native-device indexing, selection, parameter writes, activator-helper toggles, and same-track reordering are now validated in Live 12.3.7. On the validated Python surface, `track.devices` excluded the mixer device even though the LOM docs say it is included.
 - A Python-first server is realistic if it owns its own Remote Script.
 - The key remaining uncertainty is no longer whether the overall approach works, but how far it can go safely for third-party loading, plugin profiles, undo, and high-risk mutations.
 

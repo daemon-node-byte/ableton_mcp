@@ -5,7 +5,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 
-PLUGIN_CLASS_NAMES = ("VstPlugInDevice", "Vst3PlugInDevice", "AuPlugInDevice")
+PLUGIN_CLASS_NAMES = ("PluginDevice", "VstPlugInDevice", "Vst3PlugInDevice", "AuPlugInDevice")
+LEGACY_VST_PLUGIN_CLASS_NAMES = ("VstPlugInDevice", "Vst3PlugInDevice")
+LEGACY_AU_PLUGIN_CLASS_NAMES = ("AuPlugInDevice",)
 NATIVE_DEVICE_NAME_ALIASES = {
     "eq8": "EQ Eight",
     "eq eight": "EQ Eight",
@@ -34,6 +36,28 @@ class DeviceOpsMixin(object):
             return True
         return "Rack" in class_name or "GroupDevice" in class_name
 
+    def _device_is_plugin(self, device):
+        class_name = str(getattr(device, "class_name", "") or "")
+        if class_name in PLUGIN_CLASS_NAMES:
+            return True
+        return class_name.endswith("PlugInDevice")
+
+    def _device_plugin_flags(self, device):
+        class_name = str(getattr(device, "class_name", "") or "")
+        return {
+            "is_plugin": self._device_is_plugin(device),
+            "is_vst": class_name in LEGACY_VST_PLUGIN_CLASS_NAMES,
+            "is_au": class_name in LEGACY_AU_PLUGIN_CLASS_NAMES,
+        }
+
+    def _get_device_activator_parameter(self, device):
+        parameters = list(getattr(device, "parameters", []) or [])
+        if not parameters:
+            raise ValueError(
+                "Device '{}' does not expose an activator parameter helper".format(device.name)
+            )
+        return parameters[0]
+
     def _device_parameter_to_dict(self, parameter, index):
         parameter_data = {
             "index": index,
@@ -52,16 +76,16 @@ class DeviceOpsMixin(object):
         return parameter_data
 
     def _device_describe(self, device, index=None, path=None):
+        plugin_flags = self._device_plugin_flags(device)
         device_data = {
             "name": device.name,
             "class_name": device.class_name,
             "type": device.type,
             "is_active": device.is_active,
             "num_parameters": len(device.parameters),
-            "is_vst": device.class_name in ("VstPlugInDevice", "Vst3PlugInDevice"),
-            "is_au": device.class_name == "AuPlugInDevice",
             "is_rack": self._device_is_rack(device),
         }
+        device_data.update(plugin_flags)
         if index is not None:
             device_data["index"] = index
         if path is not None:
@@ -76,17 +100,19 @@ class DeviceOpsMixin(object):
         parameters = []
         for index, parameter in enumerate(device.parameters):
             parameters.append(self._device_parameter_to_dict(parameter, index))
+        plugin_flags = self._device_plugin_flags(device)
         return {
             "device_name": device.name,
             "class_name": device.class_name,
-            "is_vst": device.class_name in ("VstPlugInDevice", "Vst3PlugInDevice"),
-            "is_au": device.class_name == "AuPlugInDevice",
+            "is_plugin": plugin_flags["is_plugin"],
+            "is_vst": plugin_flags["is_vst"],
+            "is_au": plugin_flags["is_au"],
             "parameter_count": len(parameters),
             "parameters": parameters,
             "note": (
                 "For VST/AU plugins, parameters must first be Configured in Ableton "
                 "(click Configure button on the device) to appear here."
-            ) if device.class_name in PLUGIN_CLASS_NAMES else "",
+            ) if plugin_flags["is_plugin"] else "",
         }
 
     def _device_find_parameter_by_name(self, device, name):
@@ -195,14 +221,29 @@ class DeviceOpsMixin(object):
 
     def _toggle_device(self, params):
         device = self._get_device(params["track_index"], params["device_index"])
-        device.parameters[0].value = 0.0 if device.parameters[0].value > 0.5 else 1.0
-        return {"is_active": device.is_active}
+        activator = self._get_device_activator_parameter(device)
+        new_value = 0.0 if float(activator.value) > 0.5 else 1.0
+        self._device_set_parameter_value(activator, new_value)
+        return {
+            "is_active": device.is_active,
+            "enabled": float(activator.value) > 0.5,
+            "parameter_name": activator.name,
+            "mode": "activator_parameter",
+            "stability": "partial",
+        }
 
     def _set_device_enabled(self, params):
         device = self._get_device(params["track_index"], params["device_index"])
+        activator = self._get_device_activator_parameter(device)
         enabled = bool(params["enabled"])
-        device.parameters[0].value = 1.0 if enabled else 0.0
-        return {"is_active": device.is_active}
+        self._device_set_parameter_value(activator, 1.0 if enabled else 0.0)
+        return {
+            "is_active": device.is_active,
+            "enabled": float(activator.value) > 0.5,
+            "parameter_name": activator.name,
+            "mode": "activator_parameter",
+            "stability": "partial",
+        }
 
     def _delete_device(self, params):
         track = self._get_track(params["track_index"])
@@ -212,10 +253,37 @@ class DeviceOpsMixin(object):
 
     def _move_device(self, params):
         track = self._get_track(params["track_index"])
-        from_index = int(params["device_index"])
-        to_index = int(params["new_index"])
-        track.move_device(from_index, to_index)
-        return {"ok": True, "new_index": to_index}
+        from_index = self._parse_non_negative_int(params["device_index"], "device_index")
+        to_index = self._parse_non_negative_int(params["new_index"], "new_index")
+        if to_index > len(track.devices):
+            raise ValueError(
+                "new_index {} out of range for track with {} devices".format(
+                    to_index, len(track.devices)
+                )
+            )
+
+        device = self._get_device(params["track_index"], from_index)
+        song = self.song()
+        move_device = getattr(song, "move_device", None)
+        if not callable(move_device):
+            raise ValueError(
+                "Song.move_device is unavailable in this Live version; top-level move_device remains unsupported"
+            )
+
+        moved_index = move_device(device, track, to_index)
+        resolved_index = None
+        for index, candidate in enumerate(track.devices):
+            if candidate == device:
+                resolved_index = index
+                break
+        if resolved_index is None:
+            resolved_index = int(moved_index) if moved_index is not None else to_index
+        return {
+            "ok": True,
+            "new_index": int(resolved_index),
+            "requested_index": to_index,
+            "stability": "partial",
+        }
 
     def _show_plugin_window(self, params):
         """Best-effort only: this manipulates device-chain visibility, not true plugin UI."""
@@ -223,10 +291,12 @@ class DeviceOpsMixin(object):
         self.song().view.select_device(device)
         if hasattr(device, "view"):
             device.view.is_collapsed = False
+        collapsed = bool(getattr(getattr(device, "view", None), "is_collapsed", False))
         return {
             "ok": True,
             "device_name": device.name,
             "mode": "device_view_collapse",
+            "collapsed": collapsed,
             "stability": "partial",
         }
 
@@ -235,10 +305,12 @@ class DeviceOpsMixin(object):
         device = self._get_device(params["track_index"], params["device_index"])
         if hasattr(device, "view"):
             device.view.is_collapsed = True
+        collapsed = bool(getattr(getattr(device, "view", None), "is_collapsed", True))
         return {
             "ok": True,
             "device_name": device.name,
             "mode": "device_view_collapse",
+            "collapsed": collapsed,
             "stability": "partial",
         }
 
@@ -315,10 +387,19 @@ class DeviceOpsMixin(object):
 
     def _get_selected_device(self):
         try:
-            selected = self.song().view.selected_device
+            song = self.song()
+            selected_track = getattr(song.view, "selected_track", None)
+            if selected_track is None:
+                return {"selected": False}
+            selected_track_view = getattr(selected_track, "view", None)
+            if selected_track_view is None:
+                return {"selected": False}
+            selected = getattr(selected_track_view, "selected_device", None)
             if selected is None:
                 return {"selected": False}
-            for track_index, track in enumerate(self.song().tracks):
+            for track_index, track in enumerate(song.tracks):
+                if track != selected_track:
+                    continue
                 for device_index, device in enumerate(track.devices):
                     if device == selected:
                         return {

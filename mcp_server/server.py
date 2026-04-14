@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 from typing import Any, Dict, List, Optional
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 from .client import AbletonRemoteClient
 from .command_specs import FIRST_CLASS_MCP_COMMANDS, get_command_spec
@@ -13,6 +13,11 @@ from .command_specs import FIRST_CLASS_MCP_COMMANDS, get_command_spec
 
 JsonDict = Dict[str, Any]
 NoteList = List[Dict[str, Any]]
+DEFAULT_TRANSPORT = "stdio"
+SUPPORTED_TRANSPORTS = ("stdio", "http", "streamable-http", "sse")
+DEFAULT_BIND_HOST = "0.0.0.0"
+DEFAULT_HTTP_PATH = "/mcp/"
+DEFAULT_HTTP_PORT = 8080
 
 
 def _make_client():
@@ -23,6 +28,46 @@ def _invoke(command_name, params):
     get_command_spec(command_name)
     client = _make_client()
     return client.send_command(command_name, params)
+
+
+def _normalize_transport_name(value: Optional[str]) -> str:
+    transport = (value or DEFAULT_TRANSPORT).strip().lower()
+    if transport not in SUPPORTED_TRANSPORTS:
+        raise ValueError("Unsupported ABLETON_MCP_TRANSPORT '{}'".format(transport))
+    return transport
+
+
+def _normalize_http_path(value: Optional[str]) -> str:
+    path = (value or DEFAULT_HTTP_PATH).strip() or DEFAULT_HTTP_PATH
+    if not path.startswith("/"):
+        path = "/" + path
+    if not path.endswith("/"):
+        path = path + "/"
+    return path
+
+
+def _get_http_port() -> int:
+    raw_value = os.environ.get("PORT", str(DEFAULT_HTTP_PORT))
+    try:
+        return int(raw_value)
+    except ValueError:
+        raise ValueError("Invalid PORT '{}'".format(raw_value))
+
+
+def _get_run_configuration():
+    requested_transport = _normalize_transport_name(os.environ.get("ABLETON_MCP_TRANSPORT"))
+    if requested_transport == "stdio":
+        return {"transport": "stdio", "kwargs": {}}
+
+    transport = "http" if requested_transport in ("http", "streamable-http") else "sse"
+    return {
+        "transport": transport,
+        "kwargs": {
+            "host": os.environ.get("ABLETON_MCP_BIND_HOST", DEFAULT_BIND_HOST),
+            "port": _get_http_port(),
+            "path": _normalize_http_path(os.environ.get("ABLETON_MCP_HTTP_PATH")),
+        },
+    }
 
 
 mcp = FastMCP(
@@ -99,6 +144,100 @@ def create_audio_track(index: Optional[int] = None):
     if index is not None:
         params["index"] = index
     return _invoke("create_audio_track", params)
+
+
+@mcp.tool(description=get_command_spec("set_track_name").tool_description)
+def set_track_name(track_index: int, name: str):
+    return _invoke("set_track_name", {"track_index": track_index, "name": name})
+
+
+@mcp.tool(description=get_command_spec("set_track_color").tool_description)
+def set_track_color(track_index: int, color: int):
+    return _invoke("set_track_color", {"track_index": track_index, "color": color})
+
+
+@mcp.tool(description=get_command_spec("set_track_volume").tool_description)
+def set_track_volume(track_index: int, volume: float):
+    return _invoke("set_track_volume", {"track_index": track_index, "volume": volume})
+
+
+@mcp.tool(description=get_command_spec("set_track_pan").tool_description)
+def set_track_pan(track_index: int, pan: float):
+    return _invoke("set_track_pan", {"track_index": track_index, "pan": pan})
+
+
+@mcp.tool(description=get_command_spec("set_track_mute").tool_description)
+def set_track_mute(track_index: int, mute: bool):
+    return _invoke("set_track_mute", {"track_index": track_index, "mute": mute})
+
+
+@mcp.tool(description=get_command_spec("set_track_solo").tool_description)
+def set_track_solo(track_index: int, solo: bool):
+    return _invoke("set_track_solo", {"track_index": track_index, "solo": solo})
+
+
+@mcp.tool(description=get_command_spec("set_track_arm").tool_description)
+def set_track_arm(track_index: int, arm: bool):
+    return _invoke("set_track_arm", {"track_index": track_index, "arm": arm})
+
+
+@mcp.tool(description=get_command_spec("fold_track").tool_description)
+def fold_track(track_index: int):
+    return _invoke("fold_track", {"track_index": track_index})
+
+
+@mcp.tool(description=get_command_spec("unfold_track").tool_description)
+def unfold_track(track_index: int):
+    return _invoke("unfold_track", {"track_index": track_index})
+
+
+@mcp.tool(description=get_command_spec("set_send_level").tool_description)
+def set_send_level(track_index: int, send_index: int, level: float):
+    return _invoke(
+        "set_send_level",
+        {"track_index": track_index, "send_index": send_index, "level": level},
+    )
+
+
+@mcp.tool(description=get_command_spec("get_return_tracks").tool_description)
+def get_return_tracks():
+    return _invoke("get_return_tracks", {})
+
+
+@mcp.tool(description=get_command_spec("get_return_track_info").tool_description)
+def get_return_track_info(return_index: int):
+    return _invoke("get_return_track_info", {"return_index": return_index})
+
+
+@mcp.tool(description=get_command_spec("set_return_volume").tool_description)
+def set_return_volume(return_index: int, volume: float):
+    return _invoke("set_return_volume", {"return_index": return_index, "volume": volume})
+
+
+@mcp.tool(description=get_command_spec("set_return_pan").tool_description)
+def set_return_pan(return_index: int, pan: float):
+    return _invoke("set_return_pan", {"return_index": return_index, "pan": pan})
+
+
+@mcp.tool(description=get_command_spec("select_track").tool_description)
+def select_track(
+    track_index: Optional[int] = None,
+    return_index: Optional[int] = None,
+    master: bool = False,
+):
+    params = {}
+    if track_index is not None:
+        params["track_index"] = track_index
+    if return_index is not None:
+        params["return_index"] = return_index
+    if master:
+        params["master"] = True
+    return _invoke("select_track", params)
+
+
+@mcp.tool(description=get_command_spec("get_selected_track").tool_description)
+def get_selected_track():
+    return _invoke("get_selected_track", {})
 
 
 @mcp.tool(description=get_command_spec("create_clip").tool_description)
@@ -262,6 +401,44 @@ def load_instrument_or_effect(
 @mcp.tool(description=get_command_spec("load_drum_kit").tool_description)
 def load_drum_kit(track_index: int, rack_uri: str):
     return _invoke("load_drum_kit", {"track_index": track_index, "rack_uri": rack_uri})
+
+
+@mcp.tool(description=get_command_spec("get_take_lanes").tool_description)
+def get_take_lanes(track_index: int):
+    return _invoke("get_take_lanes", {"track_index": track_index})
+
+
+@mcp.tool(description=get_command_spec("create_take_lane").tool_description)
+def create_take_lane(track_index: int):
+    return _invoke("create_take_lane", {"track_index": track_index})
+
+
+@mcp.tool(description=get_command_spec("set_take_lane_name").tool_description)
+def set_take_lane_name(track_index: int, lane_index: int, name: str):
+    return _invoke(
+        "set_take_lane_name",
+        {"track_index": track_index, "lane_index": lane_index, "name": name},
+    )
+
+
+@mcp.tool(description=get_command_spec("create_midi_clip_in_lane").tool_description)
+def create_midi_clip_in_lane(
+    track_index: int,
+    lane_index: int,
+    start_time: Optional[float] = None,
+    length: Optional[float] = None,
+):
+    params = {"track_index": track_index, "lane_index": lane_index}
+    if start_time is not None:
+        params["start_time"] = start_time
+    if length is not None:
+        params["length"] = length
+    return _invoke("create_midi_clip_in_lane", params)
+
+
+@mcp.tool(description=get_command_spec("get_clips_in_take_lane").tool_description)
+def get_clips_in_take_lane(track_index: int, lane_index: int):
+    return _invoke("get_clips_in_take_lane", {"track_index": track_index, "lane_index": lane_index})
 
 
 @mcp.tool(description=get_command_spec("create_rack").tool_description)
@@ -511,10 +688,8 @@ def ableton_raw_command(type: str, params: Optional[JsonDict] = None):
 
 
 def main():
-    transport = os.environ.get("ABLETON_MCP_TRANSPORT", "stdio")
-    if transport not in ("stdio", "sse", "streamable-http"):
-        raise ValueError("Unsupported ABLETON_MCP_TRANSPORT '{}'".format(transport))
-    mcp.run(transport=transport)
+    configuration = _get_run_configuration()
+    mcp.run(transport=configuration["transport"], **configuration["kwargs"])
 
 
 __all__ = ["FIRST_CLASS_MCP_COMMANDS", "ableton_raw_command", "main", "mcp"]

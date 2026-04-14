@@ -35,3 +35,39 @@ class CommandSpecTests(unittest.TestCase):
                 else:
                     method_locations[method_name] = location
         self.assertEqual({}, duplicates)
+
+    def test_device_audit_specs_match_lom_aligned_expectations(self):
+        self.assertEqual("confirmed", COMMAND_SPECS["toggle_device"].stability)
+        self.assertEqual("confirmed", COMMAND_SPECS["set_device_enabled"].stability)
+        self.assertEqual("confirmed", COMMAND_SPECS["move_device"].stability)
+        self.assertIn("Track.insert_device", COMMAND_SPECS["load_instrument_or_effect"].notes)
+        self.assertIn("track.devices ordering", COMMAND_SPECS["get_track_devices"].notes)
+        self.assertIn("excluded the mixer device", COMMAND_SPECS["get_track_devices"].notes)
+
+    def test_fold_and_rack_specs_match_current_validation_contracts(self):
+        self.assertEqual("confirmed", COMMAND_SPECS["fold_track"].stability)
+        self.assertEqual("confirmed", COMMAND_SPECS["unfold_track"].stability)
+        self.assertIn("5-Group", COMMAND_SPECS["fold_track"].notes)
+        self.assertIn("no documented native macro-to-parameter", COMMAND_SPECS["get_rack_macros"].notes)
+        self.assertIn("808 Selector Rack.adg", COMMAND_SPECS["get_rack_macros"].notes)
+        self.assertIn("Memory Bank import", COMMAND_SPECS["get_rack_structure"].notes)
+        self.assertIn("808 Selector Rack.adg", COMMAND_SPECS["refresh_rack_memory_entry"].notes)
+        self.assertIn("intentionally unsupported", COMMAND_SPECS["apply_rack_blueprint"].notes)
+
+    def test_browser_and_take_lane_specs_match_current_validation_contracts(self):
+        self.assertEqual("confirmed", COMMAND_SPECS["get_take_lanes"].stability)
+        self.assertEqual("confirmed", COMMAND_SPECS["create_take_lane"].stability)
+        self.assertEqual("confirmed", COMMAND_SPECS["set_take_lane_name"].stability)
+        self.assertEqual("confirmed", COMMAND_SPECS["create_midi_clip_in_lane"].stability)
+        self.assertEqual("confirmed", COMMAND_SPECS["get_clips_in_take_lane"].stability)
+        self.assertFalse(COMMAND_SPECS["delete_take_lane"].mcp_exposed)
+        self.assertIn("stable ValueError", COMMAND_SPECS["delete_take_lane"].notes)
+        self.assertIn("Third-party plugin URI loading is not currently discoverable", COMMAND_SPECS["load_instrument_or_effect"].notes)
+        self.assertIn("category='all' plugin discovery can time out", COMMAND_SPECS["search_browser"].notes)
+
+    def test_arrangement_residual_specs_capture_current_undo_scope(self):
+        self.assertIn("arrangement residual validator pass", COMMAND_SPECS["undo"].notes)
+        self.assertIn("did not yet confirm a clean clip-state undo/redo round-trip", COMMAND_SPECS["create_arrangement_audio_clip"].notes)
+        self.assertIn("did not yet confirm a clean clip-state undo/redo round-trip", COMMAND_SPECS["resize_arrangement_clip"].notes)
+        self.assertIn("Audio clip move remains intentionally unsupported", COMMAND_SPECS["move_arrangement_clip"].notes)
+        self.assertIn("did not yet confirm a clean clip-state undo/redo round-trip", COMMAND_SPECS["duplicate_to_arrangement"].notes)

@@ -1,19 +1,19 @@
 # AbletonMCP
 
-[![Version v0.3-beta.0](https://img.shields.io/badge/version-v0.3--beta.0-blue)](README.md)
+[![Version v1.0.0](https://img.shields.io/badge/version-v1.0.0-blue)](README.md)
 [![Ableton Live 12](https://img.shields.io/badge/Ableton%20Live-12-000000)](docs/install-and-use-mcp.md)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](docs/install-and-use-mcp.md)
 [![MCP stdio](https://img.shields.io/badge/MCP-stdio-2E8B57)](docs/install-and-use-mcp.md)
 [![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](docs/install-and-use-mcp.md)
 
-AbletonMCP is a Python-first MCP server for Ableton Live 12 built around a custom Remote Script and a Python `stdio` MCP server.
+AbletonMCP is a Python-first MCP server for Ableton Live 12 built around a custom Remote Script and a Python MCP server that supports local `stdio` and remote HTTP transports.
 
 ## What It Includes
 
 - [AbletonMCP_Remote_Script](/Users/joshmclain/code/AbletonMCP_v2/AbletonMCP_Remote_Script)
   - runs inside Ableton Live and exposes a TCP bridge on `localhost:9877`
 - [mcp_server](/Users/joshmclain/code/AbletonMCP_v2/mcp_server)
-  - talks to the bridge and exposes MCP tools over `stdio`
+  - talks to the bridge and exposes MCP tools over local `stdio` or remote HTTP
 - [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py)
   - source of truth for command metadata, stability, and MCP exposure
 
@@ -25,25 +25,78 @@ AbletonMCP is a Python-first MCP server for Ableton Live 12 built around a custo
 
 ## Current Status
 
-Validated locally in Ableton Live 12 on `2026-04-10`:
+Validated locally in Ableton Live 12 through `2026-04-12`:
 
 - core connectivity and session introspection
+- regular track mutation and selection
+- return-track inspection, return mixer mutation, and send control in a set with existing return tracks
 - Session View clip and MIDI note round trips
 - Arrangement View MIDI/audio clip creation, edit, delete, and duplication flows
-- browser discovery plus built-in instrument, drum-kit, MIDI-effect, and audio-effect loading
+- arrangement residual validator now records mutation-level can_undo/can_redo evidence and explicit side effects for create/resize/move- MIDI/duplicate audits
+- confirmed audio clip move remains intentionally unsupported (`move_arrangement_clip` returns stable MIDI-only error)
+- browser discovery plus built-in instrument, sounds-preset, drum-kit, MIDI-effect, and audio-effect loading
+- confirmed current browser limitation for third-party plugin URI discovery on the validated surface: category-scoped searches found no discoverable loadable URI for installed plugin target `Serum 2`, and `search_browser(category=\"all\")` may time out
+- top-level native-device inspection, parameter read/write, activator-helper enable/disable, same-track reordering, deletion, and device-view collapse/expand
+- positive `fold_track` / `unfold_track` round-trip on a real foldable group track
+- first-class MCP tools for take-lane inspection, creation, rename, MIDI clip creation, and clip listing
 - first-class MCP tools for system-owned Instrument Rack and Audio Effect Rack creation, chain/device insertion, recursive structure inspection, and nested parameter tuning
-- project-root Memory Bank persistence for saved Live Sets and system-owned rack metadata
+- project-root Memory Bank persistence for saved Live Sets, including imported rack entries after `refresh_rack_memory_entry`
 - first-class MCP tools for rack, chain, and drum-rack inspection/mutation
+- direct live-vs-Memory Bank comparison on an imported non-system-owned rack target (`808 Selector Rack.adg`) before and after `refresh_rack_memory_entry`
 - LOM-backed drum-pad remap via `DrumChain.in_note` for Live 12.3+
 
 Still in the validation backlog:
 
-- take lane workflows
-- plugin-window behavior
-- third-party or broader browser/effect loading beyond the validated built-in slice
-- arrangement undo behavior and audio-move policy
+- arrangement undo/redo residual for audited mutation slice (`create_arrangement_audio_clip`, `resize_arrangement_clip`, `move_arrangement_clip` MIDI path, `duplicate_to_arrangement`): on the 2026-04-12 pass, mutate applied but undo popped disposable track setup instead of proving clip-state rollback
+- third-party plugin behavior beyond the current native-device audit
+
+## Producer Assistant Fit
+
+AbletonMCP is ready for a bounded "studio producer assistant" workflow on the validated MCP tool slice.
+
+It is a good fit for:
+
+- set inspection and navigation
+- track, return, and send control
+- Session View clip creation and MIDI note workflows
+- Arrangement View clip creation and editing
+- built-in browser search and built-in device or preset loading
+- native device inspection and parameter changes
+- rack, drum-rack, and take-lane workflows
+
+Use extra caution for:
+
+- third-party plugin discovery or loading
+- plugin editor behavior beyond device-chain collapse and expand
+- undo or redo heavy arrangement-editing flows
+- large multi-step prompts that ask the assistant to browse, load, edit, and mix in one shot
+
+## Example Prompts
+
+Keep prompts short and single-purpose. Prefer explicit track indexes, slot indexes, device indexes, and durations so the model can complete each step cleanly.
+
+- "List all track names."
+- "Show me the selected track."
+- "Create a MIDI track named Bass Ideas."
+- "Create an audio track named Vocal Print."
+- "Set track 2 volume to 0.72."
+- "Arm track 2."
+- "Create a 4-beat MIDI clip on track 2 slot 0."
+- "Show the notes in track 2 slot 0."
+- "Create an arrangement MIDI clip on track 2 at 33.0 for 8.0 beats."
+- "List arrangement clips on track 2."
+- "Search the browser for Drift in instruments."
+- "Load the built-in instrument Drift on track 2."
+- "List devices on track 2."
+- "Show parameters for device 0 on track 2."
+- "Create an Instrument Rack named Bass Stack on track 2."
+- "List the rack macros for device 1 on track 2."
+- "Create a take lane on track 2."
+- "List take lanes on track 2."
 
 ## Quick Start
+
+For local desktop use, keep the default `stdio` flow below.
 
 1. Copy [AbletonMCP_Remote_Script](/Users/joshmclain/code/AbletonMCP_v2/AbletonMCP_Remote_Script) into Ableton's MIDI Remote Scripts directory and select `AbletonMCP_Remote_Script` as the control surface.
 2. Smoke test the Live bridge:
@@ -56,10 +109,18 @@ printf '{"type":"health_check","params":{}}\n' | nc localhost 9877
 
 ```bash
 cd /Users/joshmclain/code/AbletonMCP_v2
+ABLETON_MCP_TRANSPORT=stdio \
 uv run --python 3.11 ableton-mcp
 ```
 
-For Docker, MCP client config, validator commands, and troubleshooting, use the canonical setup guide in [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md).
+For Docker, remote HTTP usage, validator commands, and troubleshooting, use the canonical setup guide in [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md).
+
+## Deployment
+
+- local desktop and Docker usage: [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md)
+- Google Cloud Run deployment: [docs/google-cloud-run-deployment.md](/Users/joshmclain/code/AbletonMCP_v2/docs/google-cloud-run-deployment.md)
+  - remote endpoint shape: `https://<service-url>/mcp/`
+  - this deployment path is intentionally public and unauthenticated in this pass, which is a security risk
 
 ## Command Surface
 
@@ -67,10 +128,12 @@ First-class MCP tools currently cover:
 
 - health, transport, and session inspection
 - basic track inspection and creation
+- first-class track mutation, send/return control, and normal/return/master selection
 - Session View clip and note workflows
 - Arrangement View clip creation and editing
 - device inspection, named parameter access, and nested rack-device path tuning
 - browser discovery and validated built-in loading
+- take-lane inspection, creation, rename, and MIDI clip workflows
 - system-owned rack authoring, blueprint application, Memory Bank persistence, and rack/chain/drum-rack inspection/mutation
 
 Anything not promoted yet is still reachable through `ableton_raw_command(...)`.
@@ -86,6 +149,8 @@ Use these as the current sources of truth:
 
 - [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md)
   - canonical setup, runtime usage, validators, and troubleshooting
+- [docs/google-cloud-run-deployment.md](/Users/joshmclain/code/AbletonMCP_v2/docs/google-cloud-run-deployment.md)
+  - Docker-based Google Cloud Run deployment
 - [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md)
   - canonical command reference
 - [docs/manual-validation-backlog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/manual-validation-backlog.md)
