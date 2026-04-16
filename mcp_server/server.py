@@ -79,6 +79,10 @@ mcp = FastMCP(
     ),
 )
 
+# Keep these aliases for hosting platforms that infer object names.
+server = mcp
+app = mcp
+
 
 @mcp.tool(description=get_command_spec("health_check").tool_description)
 def health_check():
@@ -692,4 +696,4 @@ def main():
     mcp.run(transport=configuration["transport"], **configuration["kwargs"])
 
 
-__all__ = ["FIRST_CLASS_MCP_COMMANDS", "ableton_raw_command", "main", "mcp"]
+__all__ = ["FIRST_CLASS_MCP_COMMANDS", "ableton_raw_command", "main", "mcp", "server", "app"]

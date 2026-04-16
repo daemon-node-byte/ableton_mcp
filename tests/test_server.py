@@ -20,6 +20,15 @@ class ServerRegistrationTests(unittest.TestCase):
     def test_entrypoint_exists(self):
         self.assertTrue(callable(ableton_server.main))
 
+    def test_inferred_object_aliases_exist(self):
+        self.assertIs(ableton_server.mcp, ableton_server.server)
+        self.assertIs(ableton_server.mcp, ableton_server.app)
+
+    def test_module_exports_include_inferred_aliases(self):
+        self.assertIn("mcp", ableton_server.__all__)
+        self.assertIn("server", ableton_server.__all__)
+        self.assertIn("app", ableton_server.__all__)
+
     def test_expected_tools_are_registered(self):
         tool_names = set(tool.name for tool in asyncio.run(ableton_server.mcp.list_tools()))
         expected = set(FIRST_CLASS_MCP_COMMANDS)

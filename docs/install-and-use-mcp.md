@@ -169,7 +169,45 @@ Important security note:
 - the current Cloud Run guide intentionally uses a public unauthenticated endpoint
 - that is a security risk and should be treated as an explicit tradeoff, not a safe default
 
-## 7. Current Verified Scope
+## 7. Horizon Hosting (Inferred FastMCP Entrypoint)
+
+Horizon can host this server by inferring the module-level FastMCP object from:
+
+```text
+mcp_server/server.py
+```
+
+No explicit object suffix is required. Horizon will discover one of `mcp`, `server`, or `app`; this repo exports all three names and points them to the same FastMCP instance.
+
+Required environment variables:
+
+- `ABLETON_MCP_HOST`: host or IP where the Ableton bridge is reachable
+- `ABLETON_MCP_PORT`: bridge TCP port (default `9877`)
+
+Optional environment variables:
+
+- `ABLETON_MCP_CONNECT_TIMEOUT` default: `5.0`
+- `ABLETON_MCP_RESPONSE_TIMEOUT` default: `30.0`
+
+Horizon-owned settings to avoid overriding here:
+
+- listener transport and bind lifecycle
+- exposed service port (typically provided by the platform)
+
+Networking requirement:
+
+- Horizon runtime must be able to reach `ABLETON_MCP_HOST:ABLETON_MCP_PORT`
+- if that route is not reachable, all tool calls will fail with transport errors even when Horizon startup is healthy
+
+Hosted validation playbook:
+
+1. invoke `health_check` to confirm the MCP tool surface is active
+2. invoke `get_session_info` to confirm bridge connectivity and Ableton-side state access
+3. if calls fail with a timeout, increase `ABLETON_MCP_CONNECT_TIMEOUT` and verify the network route
+4. if calls fail with connection refused, verify Remote Script is active and bridge host/port are correct
+5. if calls fail with DNS or host lookup errors, use a reachable IP or fix runtime DNS for `ABLETON_MCP_HOST`
+
+## 8. Current Verified Scope
 
 Direct Live validation through `2026-04-12` currently covers:
 
@@ -194,7 +232,7 @@ Direct Live validation through `2026-04-12` currently covers:
 
 For the full command surface and status map, use [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md) and [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py).
 
-## 8. Validation Helpers
+## 9. Validation Helpers
 
 Canonical Python test command:
 
@@ -267,7 +305,7 @@ uv run --python 3.11 python scripts/validate_macro_and_user_rack_batch.py \
 
 The `2026-04-12` imported-rack comparison used browser-loaded preset `808 Selector Rack.adg` as the manual target and confirmed the expected pre-import vs post-import semantics.
 
-## 9. Important Contract Notes
+## 10. Important Contract Notes
 
 - `create_arrangement_audio_clip` requires an absolute existing `file_path`
 - `delete_arrangement_clip`, `resize_arrangement_clip`, and `move_arrangement_clip` require exactly one selector: `clip_index` or `start_time`
@@ -314,7 +352,7 @@ The `2026-04-12` imported-rack comparison used browser-loaded preset `808 Select
 - `set_drum_rack_pad_note` readback is validated on the destination pad after remap
 - `set_drum_rack_pad_mute` falls back to chain mute when pad-level mute does not stick in Live
 
-## 9. Troubleshooting
+## 11. Troubleshooting
 
 ### The MCP server cannot connect
 
@@ -338,7 +376,7 @@ Use the pinned command:
 uv run --python 3.11 ableton-mcp
 ```
 
-## 10. Honesty Note
+## 12. Honesty Note
 
 This repo is runnable today, but it is still in an audit-heavy phase.
 Some commands are `confirmed`, some are `likely-complete`, and some remain provisional.
