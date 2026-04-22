@@ -1,44 +1,17 @@
-# AbletonMCP_v2 Command Catalog
+# Command Catalog
 
-This is the canonical inventory of commands exposed by the current Remote Script dispatcher.
+Canonical inventory of commands exposed by the AbletonMCP Remote Script, grouped by domain with stability labels and behavior notes.
 
-Use this doc for:
+Authoritative source for parameter metadata and first-class MCP exposure: [`mcp_server/command_specs.py`](../mcp_server/command_specs.py).
 
-- command names grouped by domain
-- quick-read purpose notes
-- broad readiness shorthand
-
-Use [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py) for exact parameter metadata, MCP exposure, and canonical stability labels.
+For setup, transports, and contract landmines: [install-and-use-mcp.md](install-and-use-mcp.md).
 
 ## How to Read This
 
-- `confirmed` means directly validated against a real Ableton Live 12 session
-- everything else is still a repo-level estimate and should be treated with appropriate caution
-- commands not promoted to first-class MCP tools are still reachable through `ableton_raw_command(...)`
-
-## Validation Snapshot
-
-Direct Live validation currently covers:
-
-- connectivity and session inspection
-- regular track mutation and selection
-- return-track inspection, return mixer mutation, and send control in a set with existing return tracks
-- Session View clip and note round trips
-- Arrangement View clip creation, edit, delete, import, and duplication
-- browser discovery and validated built-in loading, including a loadable `sounds` preset URI
-- built-in MIDI-effect and audio-effect loading
-- confirmed current third-party browser limitation on the validated surface: category-scoped searches for installed plugin target `Serum 2` produced no discoverable URI, and `search_browser(category="all")` may time out
-- top-level device inspection, selection, parameter read/write, activator-helper enable/disable, same-track reordering, deletion, and device-view collapse/expand on native devices
-- positive `fold_track` / `unfold_track` round-trip on a real foldable group track
-- system-owned Instrument Rack and Audio Effect Rack creation, chain insertion, nested device insertion, and recursive structure readback
-- exposed rack macro value read/write on a validated system-owned rack plus stable rejection of native macro-authoring directives
-- direct live-vs-Memory Bank comparison on an imported non-system-owned rack target (`808 Selector Rack.adg`) before and after `refresh_rack_memory_entry`
-- nested rack-device parameter read/write via track-relative LOM-style paths
-- project-root Memory Bank persistence for system-owned and imported racks in saved Live Sets
-- rack, chain, and drum-rack inspection/mutation
-- take-lane inspection, creation, rename, MIDI clip creation, and clip listing on a disposable MIDI track
-
-For setup and validator commands, use [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md).
+- **`confirmed`** — directly validated against a real Ableton Live 12 session.
+- **`likely-complete`** / **`plausible`** — implementation exists and is expected to work; use with normal caution.
+- **`partial`**, **`needs audit`**, **`stub`**, **`high risk`**, **`unverified`** — treat as provisional.
+- Commands not promoted as first-class MCP tools are still reachable through `ableton_raw_command(...)`.
 
 ## 1. Health
 
