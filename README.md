@@ -1,9 +1,12 @@
 # AbletonMCP
 
+[![Version v1.0.0](https://img.shields.io/badge/version-v1.0.0-blue)](pyproject.toml)
 [![Ableton Live 12](https://img.shields.io/badge/Ableton%20Live-12-000000)](docs/install-and-use-mcp.md)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](docs/install-and-use-mcp.md)
 [![MCP stdio](https://img.shields.io/badge/MCP-stdio-2E8B57)](docs/install-and-use-mcp.md)
 [![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](docs/install-and-use-mcp.md)
+[![Coverage](https://img.shields.io/badge/coverage-74%25-yellow)](#regenerating-badges)
+[![CodeScene Code Health](https://img.shields.io/badge/CodeScene-9.6%2F10-brightgreen)](#regenerating-badges)
 
 AbletonMCP turns Ableton Live 12 into an MCP server. An in-Live Remote Script exposes a TCP bridge, and a Python FastMCP server translates that into MCP tools your AI client can call: track and mixer control, Session and Arrangement clips, MIDI notes, browser loading, devices and rack parameters, take lanes, drum racks, and a project-root Memory Bank.
 
@@ -80,6 +83,25 @@ Keep prompts short and specific — explicit track, slot, and device indexes pro
 
 - **[`AbletonMCP_Remote_Script/`](AbletonMCP_Remote_Script)** — runs inside Ableton Live; exposes a newline-delimited JSON TCP bridge on `localhost:9877`.
 - **[`mcp_server/`](mcp_server)** — the external FastMCP server. 79 first-class MCP tools plus `ableton_raw_command` for anything else in the catalog.
+
+## Regenerating Badges
+
+The coverage and CodeScene badges are static values captured from local runs. To refresh them:
+
+```bash
+# Install the dev dependency group (adds coverage.py)
+uv sync --group dev
+
+# Coverage: prints the current percent + a paste-ready shields.io URL
+uv run --group dev python scripts/compute_metrics.py coverage
+
+# CodeScene: lists mcp_server/ files + LOC weights. Run the CodeScene MCP
+# code_health_score tool on each file, then compute the LOC-weighted mean
+# (the script prints the formula and a paste-ready badge template).
+uv run python scripts/compute_metrics.py codescene-plan
+```
+
+Then update the badge URLs in this README with the new values.
 
 ## License
 
