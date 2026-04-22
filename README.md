@@ -1,166 +1,108 @@
 # AbletonMCP
 
-[![Version v1.0.0](https://img.shields.io/badge/version-v1.0.0-blue)](README.md)
+[![Version v1.0.0](https://img.shields.io/badge/version-v1.0.0-blue)](pyproject.toml)
 [![Ableton Live 12](https://img.shields.io/badge/Ableton%20Live-12-000000)](docs/install-and-use-mcp.md)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](docs/install-and-use-mcp.md)
 [![MCP stdio](https://img.shields.io/badge/MCP-stdio-2E8B57)](docs/install-and-use-mcp.md)
 [![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](docs/install-and-use-mcp.md)
+[![Coverage](https://img.shields.io/badge/coverage-74%25-yellow)](#regenerating-badges)
+[![CodeScene Code Health](https://img.shields.io/badge/CodeScene-9.6%2F10-brightgreen)](#regenerating-badges)
 
-AbletonMCP is a Python-first MCP server for Ableton Live 12 built around a custom Remote Script and a Python MCP server that supports local `stdio` and remote HTTP transports.
-
-## What It Includes
-
-- [AbletonMCP_Remote_Script](/Users/joshmclain/code/AbletonMCP_v2/AbletonMCP_Remote_Script)
-  - runs inside Ableton Live and exposes a TCP bridge on `localhost:9877`
-- [mcp_server](/Users/joshmclain/code/AbletonMCP_v2/mcp_server)
-  - talks to the bridge and exposes MCP tools over local `stdio` or remote HTTP
-- [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py)
-  - source of truth for command metadata, stability, and MCP exposure
-
-## Why This Exists
-
-- many existing Ableton MCP stacks are strongest in Session View and weaker in arrangement editing, browser loading, and deeper device workflows
-- this repo keeps the ambitious surface in Python instead of stopping at stock `AbletonOSC` coverage
-- the historical research that led here is preserved in [docs/ableton_live_mcp_discoveries.md](/Users/joshmclain/code/AbletonMCP_v2/docs/ableton_live_mcp_discoveries.md)
-
-## Current Status
-
-Validated locally in Ableton Live 12 through `2026-04-12`:
-
-- core connectivity and session introspection
-- regular track mutation and selection
-- return-track inspection, return mixer mutation, and send control in a set with existing return tracks
-- Session View clip and MIDI note round trips
-- Arrangement View MIDI/audio clip creation, edit, delete, and duplication flows
-- arrangement residual validator now records mutation-level can_undo/can_redo evidence and explicit side effects for create/resize/move- MIDI/duplicate audits
-- confirmed audio clip move remains intentionally unsupported (`move_arrangement_clip` returns stable MIDI-only error)
-- browser discovery plus built-in instrument, sounds-preset, drum-kit, MIDI-effect, and audio-effect loading
-- confirmed current browser limitation for third-party plugin URI discovery on the validated surface: category-scoped searches found no discoverable loadable URI for installed plugin target `Serum 2`, and `search_browser(category=\"all\")` may time out
-- top-level native-device inspection, parameter read/write, activator-helper enable/disable, same-track reordering, deletion, and device-view collapse/expand
-- positive `fold_track` / `unfold_track` round-trip on a real foldable group track
-- first-class MCP tools for take-lane inspection, creation, rename, MIDI clip creation, and clip listing
-- first-class MCP tools for system-owned Instrument Rack and Audio Effect Rack creation, chain/device insertion, recursive structure inspection, and nested parameter tuning
-- project-root Memory Bank persistence for saved Live Sets, including imported rack entries after `refresh_rack_memory_entry`
-- first-class MCP tools for rack, chain, and drum-rack inspection/mutation
-- direct live-vs-Memory Bank comparison on an imported non-system-owned rack target (`808 Selector Rack.adg`) before and after `refresh_rack_memory_entry`
-- LOM-backed drum-pad remap via `DrumChain.in_note` for Live 12.3+
-
-Still in the validation backlog:
-
-- arrangement undo/redo residual for audited mutation slice (`create_arrangement_audio_clip`, `resize_arrangement_clip`, `move_arrangement_clip` MIDI path, `duplicate_to_arrangement`): on the 2026-04-12 pass, mutate applied but undo popped disposable track setup instead of proving clip-state rollback
-- third-party plugin behavior beyond the current native-device audit
-
-## Producer Assistant Fit
-
-AbletonMCP is ready for a bounded "studio producer assistant" workflow on the validated MCP tool slice.
-
-It is a good fit for:
-
-- set inspection and navigation
-- track, return, and send control
-- Session View clip creation and MIDI note workflows
-- Arrangement View clip creation and editing
-- built-in browser search and built-in device or preset loading
-- native device inspection and parameter changes
-- rack, drum-rack, and take-lane workflows
-
-Use extra caution for:
-
-- third-party plugin discovery or loading
-- plugin editor behavior beyond device-chain collapse and expand
-- undo or redo heavy arrangement-editing flows
-- large multi-step prompts that ask the assistant to browse, load, edit, and mix in one shot
-
-## Example Prompts
-
-Keep prompts short and single-purpose. Prefer explicit track indexes, slot indexes, device indexes, and durations so the model can complete each step cleanly.
-
-- "List all track names."
-- "Show me the selected track."
-- "Create a MIDI track named Bass Ideas."
-- "Create an audio track named Vocal Print."
-- "Set track 2 volume to 0.72."
-- "Arm track 2."
-- "Create a 4-beat MIDI clip on track 2 slot 0."
-- "Show the notes in track 2 slot 0."
-- "Create an arrangement MIDI clip on track 2 at 33.0 for 8.0 beats."
-- "List arrangement clips on track 2."
-- "Search the browser for Drift in instruments."
-- "Load the built-in instrument Drift on track 2."
-- "List devices on track 2."
-- "Show parameters for device 0 on track 2."
-- "Create an Instrument Rack named Bass Stack on track 2."
-- "List the rack macros for device 1 on track 2."
-- "Create a take lane on track 2."
-- "List take lanes on track 2."
+AbletonMCP turns Ableton Live 12 into an MCP server. An in-Live Remote Script exposes a TCP bridge, and a Python FastMCP server translates that into MCP tools your AI client can call: track and mixer control, Session and Arrangement clips, MIDI notes, browser loading, devices and rack parameters, take lanes, drum racks, and a project-root Memory Bank.
 
 ## Quick Start
 
-For local desktop use, keep the default `stdio` flow below.
+### 1. Install the Remote Script
 
-1. Copy [AbletonMCP_Remote_Script](/Users/joshmclain/code/AbletonMCP_v2/AbletonMCP_Remote_Script) into Ableton's MIDI Remote Scripts directory and select `AbletonMCP_Remote_Script` as the control surface.
-2. Smoke test the Live bridge:
+Copy [`AbletonMCP_Remote_Script/`](AbletonMCP_Remote_Script) into Ableton's MIDI Remote Scripts directory:
+
+- **macOS:** `/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP_Remote_Script`
+- **Windows:** `C:\Users\<you>\Documents\Ableton\User Library\Remote Scripts\AbletonMCP_Remote_Script`
+
+In Ableton: **Settings → Link, Tempo & MIDI**, select `AbletonMCP_Remote_Script` as a Control Surface.
+
+### 2. Smoke-test the bridge
+
+With Ableton Live open:
 
 ```bash
 printf '{"type":"health_check","params":{}}\n' | nc localhost 9877
 ```
 
-3. Run the MCP server locally:
+You should see `{"status":"success","result":{"status":"ok","tempo":...,...}}`.
+
+### 3. Run the MCP server
 
 ```bash
-cd /Users/joshmclain/code/AbletonMCP_v2
-ABLETON_MCP_TRANSPORT=stdio \
 uv run --python 3.11 ableton-mcp
 ```
 
-For Docker, remote HTTP usage, validator commands, and troubleshooting, use the canonical setup guide in [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md).
+That starts the server on `stdio`. For HTTP, Docker, or remote deployment, see [docs/install-and-use-mcp.md](docs/install-and-use-mcp.md).
 
-## Deployment
+### 4. Connect your MCP client
 
-- local desktop and Docker usage: [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md)
-- Google Cloud Run deployment: [docs/google-cloud-run-deployment.md](/Users/joshmclain/code/AbletonMCP_v2/docs/google-cloud-run-deployment.md)
-  - remote endpoint shape: `https://<service-url>/mcp/`
-  - this deployment path is intentionally public and unauthenticated in this pass, which is a security risk
+Example `mcpServers` entry (Claude Desktop, Cursor, etc.):
 
-## Command Surface
+```json
+{
+  "mcpServers": {
+    "ableton": {
+      "command": "uv",
+      "args": ["run", "--python", "3.11", "ableton-mcp"],
+      "cwd": "/absolute/path/to/AbletonMCP_v2"
+    }
+  }
+}
+```
 
-First-class MCP tools currently cover:
+Alternatively, use the Docker image (see the install guide).
 
-- health, transport, and session inspection
-- basic track inspection and creation
-- first-class track mutation, send/return control, and normal/return/master selection
-- Session View clip and note workflows
-- Arrangement View clip creation and editing
-- device inspection, named parameter access, and nested rack-device path tuning
-- browser discovery and validated built-in loading
-- take-lane inspection, creation, rename, and MIDI clip workflows
-- system-owned rack authoring, blueprint application, Memory Bank persistence, and rack/chain/drum-rack inspection/mutation
+## Example Prompts
 
-Anything not promoted yet is still reachable through `ableton_raw_command(...)`.
+Keep prompts short and specific — explicit track, slot, and device indexes produce the most reliable results.
 
-Use these as the current sources of truth:
-
-- [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md)
-  - domain-by-domain command inventory
-- [mcp_server/command_specs.py](/Users/joshmclain/code/AbletonMCP_v2/mcp_server/command_specs.py)
-  - exact parameter metadata, stability labels, and MCP exposure
+- "List all track names."
+- "Create a MIDI track named Bass Ideas."
+- "Set track 2 volume to 0.72."
+- "Create a 4-beat MIDI clip on track 2 slot 0."
+- "Create an arrangement MIDI clip on track 2 at 33.0 for 8.0 beats."
+- "Search the browser for Drift in instruments."
+- "Load the built-in instrument Drift on track 2."
+- "List devices on track 2. Show parameters for device 0."
+- "Create an Instrument Rack named Bass Stack on track 2."
+- "Create a take lane on track 2."
 
 ## Docs
 
-- [docs/install-and-use-mcp.md](/Users/joshmclain/code/AbletonMCP_v2/docs/install-and-use-mcp.md)
-  - canonical setup, runtime usage, validators, and troubleshooting
-- [docs/google-cloud-run-deployment.md](/Users/joshmclain/code/AbletonMCP_v2/docs/google-cloud-run-deployment.md)
-  - Docker-based Google Cloud Run deployment
-- [docs/command-catalog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/command-catalog.md)
-  - canonical command reference
-- [docs/manual-validation-backlog.md](/Users/joshmclain/code/AbletonMCP_v2/docs/manual-validation-backlog.md)
-  - next Live validation targets
-- [docs/README.md](/Users/joshmclain/code/AbletonMCP_v2/docs/README.md)
-  - docs index and reading order
+- **[Install and use](docs/install-and-use-mcp.md)** — setup, transports, Docker, Horizon hosting, environment variables, contract notes, and troubleshooting.
+- **[Command catalog](docs/command-catalog.md)** — the in-depth reference: every command grouped by domain, with stability labels and behavior notes.
+- **[Google Cloud Run deployment](docs/google-cloud-run-deployment.md)** — how to host AbletonMCP as a remote MCP endpoint.
+- **[`mcp_server/command_specs.py`](mcp_server/command_specs.py)** — machine-readable source of truth for parameter metadata, stability, and first-class MCP exposure.
 
-Archived research and planning:
+## What's in the Box
 
-- [docs/ableton_live_mcp_discoveries.md](/Users/joshmclain/code/AbletonMCP_v2/docs/ableton_live_mcp_discoveries.md)
-- [docs/api-comparison-and-codegen-prep.md](/Users/joshmclain/code/AbletonMCP_v2/docs/api-comparison-and-codegen-prep.md)
-- [docs/feasibility-spike-step-1-2.md](/Users/joshmclain/code/AbletonMCP_v2/docs/feasibility-spike-step-1-2.md)
-- [docs/remote-script-module-split-plan.md](/Users/joshmclain/code/AbletonMCP_v2/docs/remote-script-module-split-plan.md)
+- **[`AbletonMCP_Remote_Script/`](AbletonMCP_Remote_Script)** — runs inside Ableton Live; exposes a newline-delimited JSON TCP bridge on `localhost:9877`.
+- **[`mcp_server/`](mcp_server)** — the external FastMCP server. 79 first-class MCP tools plus `ableton_raw_command` for anything else in the catalog.
+
+## Regenerating Badges
+
+The coverage and CodeScene badges are static values captured from local runs. To refresh them:
+
+```bash
+# Install the dev dependency group (adds coverage.py)
+uv sync --group dev
+
+# Coverage: prints the current percent + a paste-ready shields.io URL
+uv run --group dev python scripts/compute_metrics.py coverage
+
+# CodeScene: lists mcp_server/ files + LOC weights. Run the CodeScene MCP
+# code_health_score tool on each file, then compute the LOC-weighted mean
+# (the script prints the formula and a paste-ready badge template).
+uv run python scripts/compute_metrics.py codescene-plan
+```
+
+Then update the badge URLs in this README with the new values.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
