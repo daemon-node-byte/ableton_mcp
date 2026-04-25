@@ -1,12 +1,12 @@
 # AbletonMCP
 
-[![Version v1.0.0](https://img.shields.io/badge/version-v1.0.0-blue)](pyproject.toml)
-[![Ableton Live 12](https://img.shields.io/badge/Ableton%20Live-12-000000)](docs/install-and-use-mcp.md)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](docs/install-and-use-mcp.md)
-[![MCP stdio](https://img.shields.io/badge/MCP-stdio-2E8B57)](docs/install-and-use-mcp.md)
-[![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](docs/install-and-use-mcp.md)
-[![Coverage](https://img.shields.io/badge/coverage-74%25-yellow)](#regenerating-badges)
-[![CodeScene Code Health](https://img.shields.io/badge/CodeScene-9.6%2F10-brightgreen)](#regenerating-badges)
+[![Version v1.0.0](https://img.shields.io/badge/version-v1.0.0-blue?style=for-the-badge)](pyproject.toml)
+[![Ableton Live 12](https://img.shields.io/badge/Ableton%20Live-12-000000?style=for-the-badge)](docs/install-and-use-mcp.md)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white&style=for-the-badge)](docs/install-and-use-mcp.md)
+[![MCP stdio](https://img.shields.io/badge/MCP-stdio-2E8B57?style=for-the-badge)](docs/install-and-use-mcp.md)
+[![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white&style=for-the-badge)](docs/install-and-use-mcp.md)
+[![Coverage](https://img.shields.io/badge/coverage-74%25-yellow?style=for-the-badge)](#regenerating-badges)
+[![CodeScene Code Health](https://img.shields.io/badge/CodeScene-9.6%2F10-brightgreen?style=for-the-badge)](#regenerating-badges)
 
 AbletonMCP turns Ableton Live 12 into an MCP server. An in-Live Remote Script exposes a TCP bridge, and a Python FastMCP server translates that into MCP tools your AI client can call: track and mixer control, Session and Arrangement clips, MIDI notes, browser loading, devices and rack parameters, take lanes, drum racks, and a project-root Memory Bank.
 
