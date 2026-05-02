@@ -12,13 +12,15 @@ resolve the same server. See ``docs/install-and-use-mcp.md`` §7.
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
-from typing import Any, Dict, Optional
+from typing import Annotated, Any, Dict, Optional
 
 from fastmcp import FastMCP
+from pydantic import Field
 
 from . import _registry
 from .command_specs import FIRST_CLASS_MCP_COMMANDS, get_command_spec
 from .tools import register_all
+from .tools._params import JsonCoerce
 
 
 JsonDict = Dict[str, Any]
@@ -99,7 +101,22 @@ register_all(mcp)
         "openWorldHint": True,
     },
 )
-def ableton_raw_command(type: str, params: Optional[JsonDict] = None) -> JsonDict:
+def ableton_raw_command(
+    type: Annotated[
+        str,
+        Field(description="Cataloged command name from command_specs (e.g. 'set_track_volume')."),
+    ],
+    params: Annotated[
+        Optional[Dict[str, Any]],
+        JsonCoerce,
+        Field(
+            default=None,
+            description=(
+                "Parameter object for the command. May be passed as a JSON-encoded string."
+            ),
+        ),
+    ] = None,
+) -> JsonDict:
     spec = get_command_spec(type)
     result = _registry.invoke(type, params or {})
     return {

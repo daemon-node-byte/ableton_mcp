@@ -1,24 +1,52 @@
 """Memory Bank persistence tools."""
 
-from __future__ import absolute_import, print_function, unicode_literals
+from typing import Annotated
 
 from fastmcp import FastMCP
+from pydantic import Field
 
 from .. import _registry
+from ._params import RackPath, TrackIndex
 
 
-def read_memory_bank(file_name: str):
+MemoryBankFileName = Annotated[
+    str,
+    Field(
+        description=(
+            "Memory Bank filename (e.g. 'racks.md', 'session.md'). "
+            "Resolved relative to the current Live Set's project-root '.ableton-mcp/memory/' directory."
+        ),
+        min_length=1,
+        max_length=200,
+    ),
+]
+MemoryBankContent = Annotated[
+    str,
+    Field(description="Markdown content to write. Overwrites the target file in full."),
+]
+RackEntry = Annotated[
+    str,
+    Field(
+        description=(
+            "Rack-note record (markdown blob) appended to the project Memory Bank's racks.md inventory."
+        ),
+        min_length=1,
+    ),
+]
+
+
+def read_memory_bank(file_name: MemoryBankFileName):
     return _registry.invoke("read_memory_bank", {"file_name": file_name})
 
 
-def write_memory_bank(file_name: str, content: str):
+def write_memory_bank(file_name: MemoryBankFileName, content: MemoryBankContent):
     return _registry.invoke(
         "write_memory_bank",
         {"file_name": file_name, "content": content},
     )
 
 
-def append_rack_entry(rack_data: str):
+def append_rack_entry(rack_data: RackEntry):
     return _registry.invoke("append_rack_entry", {"rack_data": rack_data})
 
 
@@ -26,7 +54,7 @@ def get_system_owned_racks():
     return _registry.invoke("get_system_owned_racks", {})
 
 
-def refresh_rack_memory_entry(track_index: int, rack_path: str):
+def refresh_rack_memory_entry(track_index: TrackIndex, rack_path: RackPath):
     return _registry.invoke(
         "refresh_rack_memory_entry",
         {"track_index": track_index, "rack_path": rack_path},

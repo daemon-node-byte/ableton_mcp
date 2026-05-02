@@ -1,8 +1,9 @@
 """Health, session inspection, and song/transport tools."""
 
-from __future__ import absolute_import, print_function, unicode_literals
+from typing import Annotated
 
 from fastmcp import FastMCP
+from pydantic import Field
 
 from .. import _registry
 
@@ -23,11 +24,25 @@ def get_current_song_time():
     return _registry.invoke("get_current_song_time", {})
 
 
-def set_current_song_time(time: float):
+def set_current_song_time(
+    time: Annotated[
+        float,
+        Field(description="Arrangement playhead position in beats. Must be >= 0.", ge=0.0),
+    ],
+):
     return _registry.invoke("set_current_song_time", {"time": time})
 
 
-def set_tempo(tempo: float):
+def set_tempo(
+    tempo: Annotated[
+        float,
+        Field(
+            description="Master tempo in BPM. Live's documented range is 20.0..999.0.",
+            ge=20.0,
+            le=999.0,
+        ),
+    ],
+):
     return _registry.invoke("set_tempo", {"tempo": tempo})
 
 

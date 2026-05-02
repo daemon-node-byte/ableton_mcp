@@ -1,73 +1,86 @@
 """Track, return, send, and selection tools."""
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-from typing import Optional
+from typing import Annotated, Optional
 
 from fastmcp import FastMCP
+from pydantic import Field
 
 from .. import _registry
+from ._params import (
+    Arm,
+    Mute,
+    NormalizedVolume,
+    OptionalTrackInsertIndex,
+    Pan,
+    ReturnIndex,
+    SendIndex,
+    SendLevel,
+    Solo,
+    TrackColor,
+    TrackIndex,
+    TrackName,
+)
 
 
 def get_all_track_names():
     return _registry.invoke("get_all_track_names", {})
 
 
-def get_track_info(track_index: int):
+def get_track_info(track_index: TrackIndex):
     return _registry.invoke("get_track_info", {"track_index": track_index})
 
 
-def create_midi_track(index: Optional[int] = None):
+def create_midi_track(index: OptionalTrackInsertIndex = None):
     params = {}
     if index is not None:
         params["index"] = index
     return _registry.invoke("create_midi_track", params)
 
 
-def create_audio_track(index: Optional[int] = None):
+def create_audio_track(index: OptionalTrackInsertIndex = None):
     params = {}
     if index is not None:
         params["index"] = index
     return _registry.invoke("create_audio_track", params)
 
 
-def set_track_name(track_index: int, name: str):
+def set_track_name(track_index: TrackIndex, name: TrackName):
     return _registry.invoke("set_track_name", {"track_index": track_index, "name": name})
 
 
-def set_track_color(track_index: int, color: int):
+def set_track_color(track_index: TrackIndex, color: TrackColor):
     return _registry.invoke("set_track_color", {"track_index": track_index, "color": color})
 
 
-def set_track_volume(track_index: int, volume: float):
+def set_track_volume(track_index: TrackIndex, volume: NormalizedVolume):
     return _registry.invoke("set_track_volume", {"track_index": track_index, "volume": volume})
 
 
-def set_track_pan(track_index: int, pan: float):
+def set_track_pan(track_index: TrackIndex, pan: Pan):
     return _registry.invoke("set_track_pan", {"track_index": track_index, "pan": pan})
 
 
-def set_track_mute(track_index: int, mute: bool):
+def set_track_mute(track_index: TrackIndex, mute: Mute):
     return _registry.invoke("set_track_mute", {"track_index": track_index, "mute": mute})
 
 
-def set_track_solo(track_index: int, solo: bool):
+def set_track_solo(track_index: TrackIndex, solo: Solo):
     return _registry.invoke("set_track_solo", {"track_index": track_index, "solo": solo})
 
 
-def set_track_arm(track_index: int, arm: bool):
+def set_track_arm(track_index: TrackIndex, arm: Arm):
     return _registry.invoke("set_track_arm", {"track_index": track_index, "arm": arm})
 
 
-def fold_track(track_index: int):
+def fold_track(track_index: TrackIndex):
     return _registry.invoke("fold_track", {"track_index": track_index})
 
 
-def unfold_track(track_index: int):
+def unfold_track(track_index: TrackIndex):
     return _registry.invoke("unfold_track", {"track_index": track_index})
 
 
-def set_send_level(track_index: int, send_index: int, level: float):
+def set_send_level(track_index: TrackIndex, send_index: SendIndex, level: SendLevel):
     return _registry.invoke(
         "set_send_level",
         {"track_index": track_index, "send_index": send_index, "level": level},
@@ -78,22 +91,42 @@ def get_return_tracks():
     return _registry.invoke("get_return_tracks", {})
 
 
-def get_return_track_info(return_index: int):
+def get_return_track_info(return_index: ReturnIndex):
     return _registry.invoke("get_return_track_info", {"return_index": return_index})
 
 
-def set_return_volume(return_index: int, volume: float):
+def set_return_volume(return_index: ReturnIndex, volume: NormalizedVolume):
     return _registry.invoke("set_return_volume", {"return_index": return_index, "volume": volume})
 
 
-def set_return_pan(return_index: int, pan: float):
+def set_return_pan(return_index: ReturnIndex, pan: Pan):
     return _registry.invoke("set_return_pan", {"return_index": return_index, "pan": pan})
 
 
 def select_track(
-    track_index: Optional[int] = None,
-    return_index: Optional[int] = None,
-    master: bool = False,
+    track_index: Annotated[
+        Optional[int],
+        Field(
+            default=None,
+            description="Selector for a regular track (0-based). Pass exactly one of track_index, return_index, or master.",
+            ge=0,
+        ),
+    ] = None,
+    return_index: Annotated[
+        Optional[int],
+        Field(
+            default=None,
+            description="Selector for a return track (0-based). Pass exactly one of track_index, return_index, or master.",
+            ge=0,
+        ),
+    ] = None,
+    master: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="Set True to select the master track. Pass exactly one of track_index, return_index, or master.",
+        ),
+    ] = False,
 ):
     params = {}
     if track_index is not None:
