@@ -76,32 +76,12 @@ Keep prompts short and specific — explicit track, slot, and device indexes pro
 
 - **[Install and use](docs/install-and-use-mcp.md)** — setup, transports, Docker, Horizon hosting, environment variables, contract notes, and troubleshooting.
 - **[Command catalog](docs/command-catalog.md)** — the in-depth reference: every command grouped by domain, with stability labels and behavior notes.
-- **[Google Cloud Run deployment](docs/google-cloud-run-deployment.md)** — how to host AbletonMCP as a remote MCP endpoint.
 - **[`mcp_server/command_specs.py`](mcp_server/command_specs.py)** — machine-readable source of truth for parameter metadata, stability, and first-class MCP exposure.
 
 ## What's in the Box
 
 - **[`AbletonMCP_Remote_Script/`](AbletonMCP_Remote_Script)** — runs inside Ableton Live; exposes a newline-delimited JSON TCP bridge on `localhost:9877`.
 - **[`mcp_server/`](mcp_server)** — the external FastMCP server. 79 first-class MCP tools plus `ableton_raw_command` for anything else in the catalog.
-
-## Regenerating Badges
-
-The coverage and CodeScene badges are static values captured from local runs. To refresh them:
-
-```bash
-# Install the dev dependency group (adds coverage.py)
-uv sync --group dev
-
-# Coverage: prints the current percent + a paste-ready shields.io URL
-uv run --group dev python scripts/compute_metrics.py coverage
-
-# CodeScene: lists mcp_server/ files + LOC weights. Run the CodeScene MCP
-# code_health_score tool on each file, then compute the LOC-weighted mean
-# (the script prints the formula and a paste-ready badge template).
-uv run python scripts/compute_metrics.py codescene-plan
-```
-
-Then update the badge URLs in this README with the new values.
 
 ## License
 
